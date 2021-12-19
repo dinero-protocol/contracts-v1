@@ -603,7 +603,7 @@ interface IStakingHelper {
     function stake( uint _amount, address _recipient ) external;
 }
 
-contract REDACTEDBondDepository is Ownable {
+contract REDACTEDLPBondDepository is Ownable {
 
     using FixedPoint for *;
     using SafeERC20 for IERC20;
@@ -626,7 +626,7 @@ contract REDACTEDBondDepository is Ownable {
 
     address public immutable BTRFLY; // token given as payment for bond
     address public immutable principal; // token used to create bond
-    address public immutable OLYMPUSDAO; // we pay homage to these guys :) (tithe/ti-the hahahahhahah)
+    address public immutable OLYMPUSDAO; // we pay homage here (tithe/ti-the hahahahhahah)
     address public immutable treasury; // mints BTRFLY when receives principal
     address public immutable DAO; // receives profit share from bond
     address public OLYMPUSTreasury; // Olympus treasury can be updated by the OLYMPUSDAO
@@ -860,7 +860,8 @@ contract REDACTEDBondDepository is Ownable {
         IERC20( principal ).approve( address( treasury ), amountDeposit );
         ITreasury( treasury ).deposit( amountDeposit, principal, profit );
         
-        IERC20( BTRFLY ).safeTransfer( DAO, fee ); 
+        // fee is transferred to dao 
+        IERC20( BTRFLY ).safeTransfer( DAO, fee );
         IERC20( BTRFLY ).safeTransfer( OLYMPUSTreasury, titheBTRFLY );
         
         // total debt is increased
@@ -990,7 +991,7 @@ contract REDACTEDBondDepository is Ownable {
      *  @return uint
      */
     function payoutFor( uint _value ) public view returns ( uint ) {
-        return FixedPoint.fraction( _value, bondPrice() ).decode112with18().div( 1e16 );
+        return FixedPoint.fraction( _value, bondPrice() ).decode112with18().div( 1e14 );
     }
 
 
@@ -999,7 +1000,7 @@ contract REDACTEDBondDepository is Ownable {
      *  @return price_ uint
      */
     function bondPrice() public view returns ( uint price_ ) {        
-        price_ = terms.controlVariable.mul( debtRatio() ).add( ITreasury(treasury).getFloor(principal) ).div( 1e7 );
+        price_ = terms.controlVariable.mul( debtRatio() ).add( ITreasury(treasury).getFloor(principal) ).div( 1e5 );
         if ( price_ < terms.minimumPrice ) {
             price_ = terms.minimumPrice;
         }
@@ -1010,7 +1011,7 @@ contract REDACTEDBondDepository is Ownable {
      *  @return price_ uint
      */
     function _bondPrice() internal returns ( uint price_ ) {
-        price_ = terms.controlVariable.mul( debtRatio() ).add( ITreasury(treasury).getFloor(principal) ).div( 1e7 );
+        price_ = terms.controlVariable.mul( debtRatio() ).add( ITreasury(treasury).getFloor(principal) ).div( 1e5 );
         if ( price_ < terms.minimumPrice ) {
             price_ = terms.minimumPrice;        
         } else if ( terms.minimumPrice != 0 ) {
@@ -1129,7 +1130,6 @@ contract REDACTEDBondDepository is Ownable {
         require(msg.sender == OLYMPUSDAO || msg.sender == DAO, "UNAUTHORISED : YOU'RE NOT OLYMPUS OR REDACTED");
         OLYMPUSTreasury = _newTreasury;
     }
-
 
 
 }
