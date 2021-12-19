@@ -1,16 +1,25 @@
 /* eslint-disable camelcase */
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
+import { Contract } from 'ethers'
 import { ethers } from 'hardhat'
 import {
+  BTRFLY,
   BTRFLY__factory,
+  CRV,
   CRV__factory,
+  CVX,
+  Distributor,
   Distributor__factory,
   REDACTEDBondDepository__factory,
+  REDACTEDStaking,
+  REDACTEDTreasury,
   REDACTEDTreasury__factory,
   StakingHelper__factory,
   StakingWarmup__factory,
+  XBTRFLY,
   XBTRFLY__factory,
 } from '../typechain'
+import { ZERO_ADDRESS } from './constants'
 
 export const deployCRV = async () => {
   const CrvFactory = (await ethers.getContractFactory('CRV')) as CRV__factory
@@ -171,6 +180,75 @@ export const deployBond = async (
   )
 
   await bond.setStaking(staking, helper)
+}
+
+export const setUpXbtrfly = async (xbtrfly: XBTRFLY, staking: string, initialIndex: string) => {
+  await xbtrfly.initialize(staking)
+  await xbtrfly.setIndex(initialIndex)
+}
+
+export const setUpStaking = async (
+  staking: REDACTEDStaking,
+  distributor: string,
+  stakingWarmup: string,
+  admin: SignerWithAddress,
+) => {
+  await staking.connect(admin).setContract('0', distributor)
+  await staking.connect(admin).setContract('1', stakingWarmup)
+}
+
+export const setUpTreasury = async (
+  btrfly: BTRFLY,
+  treasury: string,
+  admin: SignerWithAddress,
+) => {
+  await btrfly.connect(admin).setVault(treasury)
+}
+
+export const setUpDistributor = async (
+  distributor: Distributor,
+  staking: string,
+  initialRewardRate: string,
+  admin: SignerWithAddress,
+) => {
+  await distributor.connect(admin).addRecipient(staking, initialRewardRate)
+}
+
+export const queueAndToggleDistributor = async (
+  treasury: REDACTEDTreasury,
+  distributor: string,
+  admin: SignerWithAddress,
+) => {
+  await treasury.connect(admin).queue('8', distributor)
+  await treasury.connect(admin).toggle('8', distributor, ZERO_ADDRESS)
+}
+
+export const queueAndToggleReserveDepositor = async (
+  treasury: REDACTEDTreasury,
+  gnosisSafe: string,
+  admin: SignerWithAddress,
+) => {
+  await treasury.connect(admin).queue('0', gnosisSafe)
+  await treasury.connect(admin).toggle('0', gnosisSafe, ZERO_ADDRESS)
+}
+// if liquidty token we need to add the bond as liq depostor Lp bonds and gonsis safe
+export const queueAndToggleLiquidityDepositorAsGnosis = async (
+  treasury: REDACTEDTreasury,
+  gnosisSafe: string,
+  admin: SignerWithAddress,
+) => {
+  await treasury.connect(admin).queue('4', gnosisSafe)
+  await treasury.connect(admin).toggle('4', gnosisSafe, ZERO_ADDRESS)
+}
+
+// Approve the treasury to spend DAI and Frax
+
+export const approveTreasuryToSpendERC20FromGnosis = async (
+  token: CRV | CVX | Contract,
+  treasury: string,
+  gnosis: SignerWithAddress,
+) => {
+  await token.connect(gnosis).approve(treasury, ethers.utils.parseEther('10000000000000000'))
 }
 
 export const deployCvxBond = async () => {}
