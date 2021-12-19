@@ -1,5 +1,8 @@
 {
   "name": "hardhat-project",
+  "scripts": {
+    "test": "npx hardhat node --fork https://eth-mainnet.alchemyapi.io/v2/kjZ_ILrD3UOpAqSJKxFhNza9c3lIKkQy --fork-block-number 12799760"
+  },
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "^2.0.0",
     "@nomiclabs/hardhat-etherscan": "^2.1.3",

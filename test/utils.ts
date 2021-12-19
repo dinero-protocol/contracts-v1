@@ -48,3 +48,23 @@ export const getTREASURY = async (address: string) => {
   const contract = await ethers.getContractAt('REDACTEDTreasury', address)
   return contract
 }
+
+export const getStakingHelper = async (address: string) => {
+  const contract = await ethers.getContractAt('StakingHelper', address)
+  return contract
+}
+
+export const getWarmupHelper = async (address: string) => {
+  const contract = await ethers.getContractAt('StakingWarmup', address)
+  return contract
+}
+
+export const getStakingDistributor = async (address: string) => {
+  const contract = await ethers.getContractAt('Distributor', address)
+  return contract
+}
+
+export const getBondingCalculator = async (address: string) => {
+  const contract = await ethers.getContractAt('REDACTEDBondingCalculator', address)
+  return contract
+}
