@@ -12,6 +12,7 @@ import {
   Distributor__factory,
   REDACTEDBondDepository__factory,
   REDACTEDStaking,
+  REDACTEDStaking__factory,
   REDACTEDTreasury,
   REDACTEDTreasury__factory,
   StakingHelper__factory,
@@ -88,6 +89,28 @@ export const deployTreasury = async (
   )
 
   return treasury
+}
+
+export const deployStaking = async (
+  btrfly: string,
+  xbtrfly: string,
+  epochLengthInBlocks: number,
+  firstEpochNumber: number,
+  firstEpochBlock: number,
+) => {
+  const StakingFactory = (await ethers.getContractFactory(
+    'REDACTEDStaking',
+  )) as REDACTEDStaking__factory
+
+  const staking = await StakingFactory.deploy(
+    btrfly,
+    xbtrfly,
+    epochLengthInBlocks,
+    firstEpochNumber,
+    firstEpochBlock,
+  )
+
+  return staking
 }
 
 export const deployBondingCalculator = async (btrfly: string) => {
