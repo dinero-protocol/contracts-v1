@@ -603,7 +603,7 @@ interface IStakingHelper {
     function stake( uint _amount, address _recipient ) external;
 }
 
-contract REDACTEDBondDepository is Ownable {
+contract REDACTEDLPBondDepository is Ownable {
 
     using FixedPoint for *;
     using SafeERC20 for IERC20;
@@ -853,16 +853,16 @@ contract REDACTEDBondDepository is Ownable {
             deposited into the treasury, returning (_amount - profit) BTRFLY
          */
         IERC20( principal ).safeTransferFrom( msg.sender, address(this), _amount );
-        IERC20( principal ).safeTransfer( OLYMPUSDAO, tithePrincipal );
+        IERC20( principal ).safeTransfer( OLYMPUSTreasury, tithePrincipal );
 
         uint amountDeposit = _amount.sub(tithePrincipal);
 
         IERC20( principal ).approve( address( treasury ), amountDeposit );
         ITreasury( treasury ).deposit( amountDeposit, principal, profit );
         
-        if ( fee != 0 ) { // fee is transferred to dao 
-            IERC20( BTRFLY ).safeTransfer( DAO, fee ); 
-        }
+        // fee is transferred to dao 
+        IERC20( BTRFLY ).safeTransfer( DAO, fee );
+        IERC20( BTRFLY ).safeTransfer( OLYMPUSTreasury, titheBTRFLY );
         
         // total debt is increased
         totalDebt = totalDebt.add( value ); 
@@ -1125,4 +1125,11 @@ contract REDACTEDBondDepository is Ownable {
         IERC20( _token ).safeTransfer( DAO, IERC20( _token ).balanceOf( address(this) ) );
         return true;
     }
+
+    function setOLYMPUSTreasury( address _newTreasury ) external {
+        require(msg.sender == OLYMPUSDAO || msg.sender == DAO, "UNAUTHORISED : YOU'RE NOT OLYMPUS OR REDACTED");
+        OLYMPUSTreasury = _newTreasury;
+    }
+
+
 }
