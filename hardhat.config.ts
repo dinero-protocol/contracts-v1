@@ -56,8 +56,8 @@ const config: HardhatUserConfig = {
     },
     hardhat: {
       forking: {
-        url: 'http://127.0.0.1:8545/',
-        blockNumber: 11095000,
+        url: process.env.MAINNET_URL !== undefined ? process.env.MAINNET_URL : '',
+        blockNumber: 13835553,
         enabled: true,
       },
     },
