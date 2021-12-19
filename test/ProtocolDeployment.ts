@@ -264,8 +264,6 @@ export const queueAndToggleLiquidityDepositorAsGnosis = async (
   await treasury.connect(admin).toggle('4', gnosisSafe, ZERO_ADDRESS)
 }
 
-// Approve the treasury to spend DAI and Frax
-
 export const approveTreasuryToSpendERC20FromGnosis = async (
   token: CRV | CVX | Contract,
   treasury: string,
