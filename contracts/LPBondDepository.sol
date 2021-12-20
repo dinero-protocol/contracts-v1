@@ -1,4 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+import "hardhat/console.sol";
+
 pragma solidity 0.7.5;
 
 interface IOwnable {
@@ -837,7 +839,9 @@ contract REDACTEDLPBondDepository is Ownable {
         uint tithePrincipal = _amount.mul(terms.tithe).div(100000);
 
         uint value = ITreasury( treasury ).valueOf( principal, _amount );
+        console.log(" value = ", value);
         uint payout = payoutFor( value ); // payout to bonder is computed
+        console.log("payout = ",payout);
 
         require( payout >= 10000000, "Bond too small" ); // must be > 0.01 BTRFLY ( underflow protection )
         require( payout <= maxPayout(), "Bond too large"); // size protection because there is no slippage

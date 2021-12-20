@@ -20,7 +20,7 @@ import {
 
 import { 
     REDACTEDTreasury, 
-    REDACTEDLPBondDepository,
+    REDACTEDBondDepository,
     IERC20
 } from "../typechain"
 
@@ -31,7 +31,7 @@ const LP_WHALE          = "0x424be8df5db7b04b1063bd4ee0f99db445c59624"
 
 const BCV               = "55"
 const VESTING           = "33110"
-const MINPRICE          = "10"
+const MINPRICE          = "50"
 const MAXPAYOUT         = "100"
 const FEE               = "9500"
 const MAXDEBT           = ethers.utils.parseEther("10000000000000000000000000000")
@@ -48,7 +48,7 @@ let treasuryContract    : REDACTEDTreasury
 let lpToken             : IERC20
 let btrfly              : IERC20
 let ohm                 : IERC20
-let lpBond              : REDACTEDLPBondDepository
+let lpBond              : REDACTEDBondDepository
 let lpWhale             : SignerWithAddress
 
 
@@ -79,8 +79,10 @@ describe("Live LP bonds", function(){
         
         const lpTokenFloor = await treasuryContract.getFloor(LP_TOKEN_ADDRESS);
 
+        console.log(lpTokenFloor);
+
         // set LP token floor to 1B if it is 0
-        if ( lpTokenFloor == BigNumber.from(0) ){
+        if ( lpTokenFloor.eq(BigNumber.from(0)) ){
 
             await treasuryContract.setFloor(
                 LP_TOKEN_ADDRESS,
@@ -89,37 +91,35 @@ describe("Live LP bonds", function(){
 
         }
 
-        // if there's no bonding calculator, remove and re-add LP token and add bonding calculator
-        const lpBondingCalculator = await treasuryContract.bondCalculator(LP_TOKEN_ADDRESS)
+        const NewBondingCalculator = await ethers.getContractFactory("BtrflyOhmBondingCalculator");
+        const newbondingCalculator = await NewBondingCalculator.deploy(BTRFLY_ADDRESS);
 
-        if (lpBondingCalculator == ZERO_ADDRESS){
+        console.log("Reset LP")
 
-            await treasuryContract.queue(
-                BigNumber.from(5),
-                LP_TOKEN_ADDRESS
-            )
+        /**await treasuryContract.queue(
+            BigNumber.from(5),
+            LP_TOKEN_ADDRESS
+        )
 
-            await treasuryContract.toggle(
-                BigNumber.from(5),
-                LP_TOKEN_ADDRESS,
-                ZERO_ADDRESS
-            )
+        await treasuryContract.toggle(
+            BigNumber.from(5),
+            LP_TOKEN_ADDRESS,
+            ZERO_ADDRESS
+        )**/
 
-            await treasuryContract.queue(
-                BigNumber.from(5),
-                LP_TOKEN_ADDRESS
-            )
+        await treasuryContract.queue(
+            BigNumber.from(5),
+            LP_TOKEN_ADDRESS
+        )
 
-            await treasuryContract.toggle(
-                BigNumber.from(5),
-                LP_TOKEN_ADDRESS,
-                BONDING_CALCULATOR
-            )
-
-        }
+        await treasuryContract.toggle(
+            BigNumber.from(5),
+            LP_TOKEN_ADDRESS,
+            BONDING_CALCULATOR
+        )
 
         // deploy LPbonds
-        const LPBond = await ethers.getContractFactory("REDACTEDLPBondDepository")
+        const LPBond = await ethers.getContractFactory("REDACTEDBondDepository")
 
         lpBond = await LPBond.deploy(
             BTRFLY_ADDRESS,
