@@ -1,14 +1,20 @@
 import { BigNumber } from 'ethers'
 import { ethers, network } from 'hardhat'
+import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 
-export const impersonateAddressAndReturnSigner = async (address: string) => {
-  await network.provider.request({
-    method: 'hardhat_impersonateAccount',
-    params: [address],
+export const impersonateAddressAndReturnSigner = async (
+  networkAdmin: SignerWithAddress,
+  address: string,
+) => {
+  await ethers.provider.send('hardhat_impersonateAccount', [address]) // get some eth from a miner
+  const account = await ethers.getSigner(address)
+  await networkAdmin.sendTransaction({
+    to: address,
+    value: ethers.utils.parseEther('1.0'),
   })
-  const signer = await ethers.getSigner('0x364d6D0333432C3Ac016Ca832fb8594A8cE43Ca6')
-  return signer
+  return account
 }
+
 
 export async function increaseTime(value: BigNumber) {
   if (!ethers.BigNumber.isBigNumber(value)) {
