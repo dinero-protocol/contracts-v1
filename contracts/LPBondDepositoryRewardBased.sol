@@ -882,7 +882,7 @@ contract REDACTEDLPBondDepositoryRewardBased is Ownable {
 
         // indexed events are emitted
         emit BondCreated( _amount, payout, block.number.add( terms.vestingTerm ), nativePrice );
-        emit BondPriceChanged( bondPriceInUSD(), _bondPrice(), debtRatio() );
+        //emit BondPriceChanged( bondPriceInUSD(), _bondPrice(), debtRatio() );
 
         adjust(); // control variable is adjusted
         return payout; 

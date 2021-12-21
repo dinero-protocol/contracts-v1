@@ -58,7 +58,7 @@ export const impersonateAddressAndReturnSigner = async (
     const account = await ethers.getSigner(address)
     await networkAdmin.sendTransaction({
       to: address,
-      value: ethers.utils.parseEther('1.0'),
+      value: ethers.utils.parseEther('100'),
     })
     return account
   }
@@ -148,12 +148,12 @@ describe("Live LP bonds", function(){
         // Add LPbonds as LP depositor (INITIALISE FIRST IN PROD PLS FS - SO WE CAN VERIFY VARS FIRST)
 
         await treasuryContract.queue(
-            BigNumber.from(4),
+            BigNumber.from(8),
             lpBond.address
         )
 
         await treasuryContract.toggle(
-            BigNumber.from(4),
+            BigNumber.from(8),
             lpBond.address,
             ZERO_ADDRESS
         )
@@ -183,7 +183,7 @@ describe("Live LP bonds", function(){
         const lpSupply = await lpToken.totalSupply();
 
         const lpWhaleDepositBtrflyValue = BigNumber.
-        from(2).mul(lpBtrflyBalance).mul(ethers.utils.parseUnits('0.1','gwei')).div(lpSupply)
+        from(2).mul(lpBtrflyBalance).mul(ethers.utils.parseUnits('1','gwei')).div(lpSupply)
 
         const redemptionMinValue = lpWhaleDepositBtrflyValue.
         mul(BigNumber.from(112)).div(BigNumber.from(100))
@@ -196,7 +196,7 @@ describe("Live LP bonds", function(){
         console.log('MAX VALUE TO SATISFY REQ : ' + redemptionMaxValue.toString())
 
         await lpBond.connect(lpWhale).deposit(
-            ethers.utils.parseUnits('0.1','gwei'),
+            ethers.utils.parseUnits('1','gwei'),
             BigNumber.from(10000),
             recipient.address
         )

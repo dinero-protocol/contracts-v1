@@ -10,7 +10,7 @@ export const impersonateAddressAndReturnSigner = async (
   const account = await ethers.getSigner(address)
   await networkAdmin.sendTransaction({
     to: address,
-    value: ethers.utils.parseEther('1.0'),
+    value: ethers.utils.parseEther('100'),
   })
   return account
 }
