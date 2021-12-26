@@ -740,9 +740,17 @@ library SafeERC20 {
 interface IStaking {
     function stake( uint _amount, address _recipient ) external returns ( bool );
 
-    function unstake( uint _amount, address _recipient ) external returns ( bool );
+    function claim( address recipient ) external;
+
+    function unstake( uint _amount, bool _trigger ) external;
 
     function index() external view returns ( uint );
+}
+
+interface IxBTRFLY {
+    function balanceForGons( uint gons ) external view returns ( uint );
+
+    function gonsForBalance( uint amount ) external view returns ( uint );
 }
 
 interface IOwnable {
@@ -837,6 +845,9 @@ contract wxBTRFLY is FrozenToken {
     address public immutable BTRFLY;
     address public immutable xBTRFLY;
 
+    //DON'T EVER F***ING CHANGE PLS - thank you :) | DOUBLE CHECK on Etherscan to verify number is correct
+    uint public immutable realINDEX = 23158417847463239084714197001737581570653996933128112807891516 * 1e9; 
+
     constructor( address _staking, address _BTRFLY, address _xBTRFLY ) ERC20( 'wxBTRFLY', 'wxBTRFLY' ) {
         require( _staking != address(0) );
         staking = _staking;
@@ -853,9 +864,9 @@ contract wxBTRFLY is FrozenToken {
      */
     function wrapFromBTRFLY( uint _amount ) external returns ( uint ) {
         IERC20( BTRFLY ).transferFrom( msg.sender, address(this), _amount );
-
         IERC20( BTRFLY ).approve( staking, _amount ); // stake BTRFLY for sBTRFLY
         IStaking( staking ).stake( _amount, address(this) );
+        IStaking( staking ).claim(address(this));
 
         uint value = wBTRFLYValue( _amount );
         _mint( msg.sender, value );
@@ -872,7 +883,7 @@ contract wxBTRFLY is FrozenToken {
         
         uint value = xBTRFLYValue( _amount );
         IERC20( xBTRFLY ).approve( staking, value ); // unstake sBTRFLY for BTRFLY
-        IStaking( staking ).unstake( value, address(this) );
+        IStaking( staking ).unstake( value, false);
 
         IERC20( BTRFLY ).transfer( msg.sender, value );
         return value;
@@ -910,7 +921,7 @@ contract wxBTRFLY is FrozenToken {
         @return uint
      */
     function xBTRFLYValue( uint _amount ) public view returns ( uint ) {
-        return _amount.mul( IStaking( staking ).index() ).div( 10 ** decimals() );
+        return _amount.mul( realIndex() ).div( 10 ** decimals() );
     }
 
     /**
@@ -919,7 +930,11 @@ contract wxBTRFLY is FrozenToken {
         @return uint
      */
     function wBTRFLYValue( uint _amount ) public view returns ( uint ) {
-        return _amount.mul( 10 ** decimals() ).div( IStaking( staking ).index() );
+        return _amount.mul( 10 ** decimals() ).div( realIndex() );
+    }
+
+    function realIndex() public view returns ( uint ) {
+        return IxBTRFLY(xBTRFLY).balanceForGons(realINDEX);
     }
 
 }
