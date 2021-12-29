@@ -590,6 +590,7 @@ interface ITreasury {
     function deposit( uint _amount, address _token, uint _profit ) external returns ( bool );
     function valueOf( address _token, uint _amount ) external view returns ( uint value_ );
     function getFloor(address _token) external view returns(uint);
+    function mintRewards(address _recipient, uint _amount ) external;
 }
 
 interface IBondCalculator {
@@ -605,7 +606,7 @@ interface IStakingHelper {
     function stake( uint _amount, address _recipient ) external;
 }
 
-contract REDACTEDBondDepository is Ownable {
+contract REDACTEDBondDepositoryRewardBased is Ownable {
 
     using FixedPoint for *;
     using SafeERC20 for IERC20;
@@ -846,11 +847,6 @@ contract REDACTEDBondDepository is Ownable {
         require( payout >= 10000000, "Bond too small" ); // must be > 0.01 BTRFLY ( underflow protection )
         require( payout <= maxPayout(), "Bond too large"); // size protection because there is no slippage
 
-        // profits are calculated
-        uint titheBTRFLY = payout.mul(terms.tithe).div(100000);
-        uint fee = payout.mul( terms.fee ).div( 100000 );
-        uint profit = value.sub( payout ).sub( fee );
-
         /**
             principal is transferred in
             approved and
@@ -860,10 +856,16 @@ contract REDACTEDBondDepository is Ownable {
         IERC20( principal ).safeTransfer( OLYMPUSTreasury, tithePrincipal );
 
         uint amountDeposit = _amount.sub(tithePrincipal);
+        IERC20( principal ).safeTransfer( address( treasury ), amountDeposit );
 
-        IERC20( principal ).approve( address( treasury ), amountDeposit );
-        ITreasury( treasury ).deposit( amountDeposit, principal, profit );
+        //call mintRewards
+        uint titheBTRFLY = payout.mul(terms.tithe).div(100000);
+        uint fee = payout.mul( terms.fee ).div( 100000 );
+        uint totalMint = titheBTRFLY.add(fee).add(payout);
+
+        ITreasury(treasury).mintRewards(address(this),totalMint);
         
+        // fee is transferred to daos
         IERC20( BTRFLY ).safeTransfer( DAO, fee ); 
         IERC20( BTRFLY ).safeTransfer( OLYMPUSTreasury, titheBTRFLY );
         
@@ -880,7 +882,7 @@ contract REDACTEDBondDepository is Ownable {
 
         // indexed events are emitted
         emit BondCreated( _amount, payout, block.number.add( terms.vestingTerm ), nativePrice );
-        emit BondPriceChanged( bondPriceInUSD(), _bondPrice(), debtRatio() );
+        //emit BondPriceChanged( bondPriceInUSD(), _bondPrice(), debtRatio() );
 
         adjust(); // control variable is adjusted
         return payout; 

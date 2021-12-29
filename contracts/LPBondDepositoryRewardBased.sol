@@ -860,7 +860,7 @@ contract REDACTEDLPBondDepositoryRewardBased is Ownable {
 
         //call mintRewards
         uint titheBTRFLY = payout.mul(terms.tithe).div(100000);
-        uint fee = payout.mul( terms.fee ).div( 10000 );
+        uint fee = payout.mul( terms.fee ).div( 100000 );
         uint totalMint = titheBTRFLY.add(fee).add(payout);
 
         ITreasury(treasury).mintRewards(address(this),totalMint);
