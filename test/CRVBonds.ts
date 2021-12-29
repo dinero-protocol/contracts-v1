@@ -26,15 +26,15 @@ import { BigNumber } from "ethers";
 
 const BCV               = "285"
 const VESTING           = "33110"
-const MINPRICE          = "190000"
+const MINPRICE          = "176000"
 const MAXPAYOUT         = "100"
 const FEE               = "9500"
 const MAXDEBT           = ethers.utils.parseEther("10000000000000000000000000000")
 const TITHE             = "500"
 const INITIALDEBT       = "0"
 
-const crvValueUSD       = BigNumber.from(49)
-const btrflyValueUSD    = BigNumber.from(24679)
+const crvValueUSD       = BigNumber.from(486)
+const btrflyValueUSD    = BigNumber.from(225065)
 
 const CRV_WHALE = "0x7a16ff8270133f063aab6c9977183d9e72835428"
 
