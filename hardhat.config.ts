@@ -26,6 +26,24 @@ const config: HardhatUserConfig = {
   solidity: {
     compilers: [
       {
+        version: '0.4.18',
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200,
+          },
+        },
+      },
+      {
+        version: '0.6.12',
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200,
+          },
+        },
+      },
+      {
         version: '0.7.5',
         settings: {
           optimizer: {
@@ -54,13 +72,19 @@ const config: HardhatUserConfig = {
       url: '',
       accounts: process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
     },
+    // hardhat: {
+    //   forking: {
+    //     url: process.env.MAINNET_URL !== undefined ? process.env.MAINNET_URL : '',
+    //     enabled: true,
+    //   },
+    //   accounts : {
+    //     mnemonic : process.env.SEED
+    //   },
+    // },
     hardhat: {
-      forking: {
-        url: process.env.MAINNET_URL !== undefined ? process.env.MAINNET_URL : '',
-        enabled: true,
-      },
-      accounts : {
-        mnemonic : process.env.SEED
+      chainId: 31337,
+      accounts: {
+        mnemonic: process.env.SEED,
       },
     },
   },
