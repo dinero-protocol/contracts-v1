@@ -19,6 +19,25 @@ interface IRedactedTreasury {
     function manage(address _token, uint256 _amount) external;
 }
 
+interface ISushiRouter {
+    function addLiquidity(
+        address tokenA,
+        address tokenB,
+        uint256 amountADesired,
+        uint256 amountBDesired,
+        uint256 amountAMin,
+        uint256 amountBMin,
+        address to,
+        uint256 deadline
+    )
+        external
+        returns (
+            uint256 amountA,
+            uint256 amountB,
+            uint256 liquidity
+        );
+}
+
 contract Thecosomata {
     using SafeMath for uint256;
 
@@ -28,6 +47,7 @@ contract Thecosomata {
     IsOHM public immutable sOHM;
     IOlympusTreasury public immutable OlympusTreasury;
     IRedactedTreasury public immutable RedactedTreasury;
+    ISushiRouter public immutable SushiRouter;
 
     constructor(
         address _BTRFLY,
@@ -35,7 +55,8 @@ contract Thecosomata {
         address _OHM,
         address _sOHM,
         address _OlympusTreasury,
-        address _RedactedTreasury
+        address _RedactedTreasury,
+        address _SushiRouter
     ) {
         require(_BTRFLY != address(0));
         BTRFLY = IERC20(_BTRFLY);
@@ -54,13 +75,16 @@ contract Thecosomata {
 
         require(_RedactedTreasury != address(0));
         RedactedTreasury = IRedactedTreasury(_RedactedTreasury);
+
+        require(_SushiRouter != address(0));
+        SushiRouter = ISushiRouter(_SushiRouter);
     }
 
     /**
         @notice Called by Keeper for checking whether upkeep is needed
         @param  checkData    bytes Data passed to the contract when checking for upkeep
         @return upkeepNeeded bool  Indicates whether performUpkeep should be called
-        @return performData  bytes Bytes that the Keeper should call performUpkeep with
+        @return performData  bytes Bytes that the Keeper can use when calling performUpkeep
      */
     function checkUpkeep(bytes calldata checkData)
         external
@@ -126,5 +150,24 @@ contract Thecosomata {
      */
     function incurOlympusDebt() internal {
         OlympusTreasury.incurDebt(sOHM.balanceOf(address(this)), OHM);
+    }
+
+    /**
+        @notice Add OHM and BTRFLY as liquidity to Sushi LP
+     */
+    function addOHMBTRFLYLiquiditySushiSwap() internal {
+        uint256 BTRFLYBalance = BTRFLY.balanceOf(address(this));
+        uint256 OHMBalance = IERC20(OHM).balanceOf(address(this));
+
+        SushiRouter.addLiquidity(
+            address(BTRFLY),
+            OHM,
+            BTRFLYBalance,
+            OHMBalance,
+            BTRFLYBalance,
+            OHMBalance,
+            address(RedactedTreasury), // Mint LP tokens directly to Redacted treasury
+            block.timestamp + 5 minutes
+        );
     }
 }
