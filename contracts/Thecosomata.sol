@@ -13,6 +13,10 @@ interface IOlympusTreasury {
     function debtLimit(address) external view returns (uint256);
 }
 
+interface IRedactedTreasury {
+    function manage(address _token, uint256 _amount) external;
+}
+
 contract Thecosomata {
     using SafeMath for uint256;
 
@@ -21,13 +25,15 @@ contract Thecosomata {
     address public immutable OHM;
     IsOHM public immutable sOHM;
     IOlympusTreasury public immutable OlympusTreasury;
+    IRedactedTreasury public immutable RedactedTreasury;
 
     constructor(
         address _BTRFLY,
         address _sushiFactory,
         address _OHM,
         address _sOHM,
-        address _OlympusTreasury
+        address _OlympusTreasury,
+        address _RedactedTreasury
     ) {
         require(_BTRFLY != address(0));
         BTRFLY = IERC20(_BTRFLY);
@@ -43,6 +49,9 @@ contract Thecosomata {
 
         require(_OlympusTreasury != address(0));
         OlympusTreasury = IOlympusTreasury(_OlympusTreasury);
+
+        require(_RedactedTreasury != address(0));
+        RedactedTreasury = IRedactedTreasury(_RedactedTreasury);
     }
 
     /**
@@ -100,5 +109,13 @@ contract Thecosomata {
         uint256 debtLimit = OlympusTreasury.debtLimit(address(this));
 
         return debtLimit.sub(debtBalance);
+    }
+
+    /**
+        @notice Withdraw sOHM from Redacted treasury
+        @param  amount uint256 The amount of sOHM to withdraw
+     */
+    function withdrawSOHMFromTreasury(uint256 amount) internal {
+        RedactedTreasury.manage(address(sOHM), amount);
     }
 }
