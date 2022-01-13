@@ -3,16 +3,31 @@ pragma solidity 0.7.5;
 
 import {UniswapV2Library} from "./library/UniswapV2Library.sol";
 import {IERC20} from "./interface/IERC20.sol";
+import {SafeMath} from "./library/SafeMath.sol";
+
+interface IsOHM is IERC20 {
+    function debtBalances(address _address) external view returns (uint256);
+}
+
+interface IOlympusTreasury {
+    function debtLimit(address) external view returns (uint256);
+}
 
 contract Thecosomata {
+    using SafeMath for uint256;
+
     IERC20 public immutable BTRFLY;
     address public immutable sushiFactory;
     address public immutable OHM;
+    IsOHM public immutable sOHM;
+    IOlympusTreasury public immutable OlympusTreasury;
 
     constructor(
         address _BTRFLY,
         address _sushiFactory,
-        address _OHM
+        address _OHM,
+        address _sOHM,
+        address _OlympusTreasury
     ) {
         require(_BTRFLY != address(0));
         BTRFLY = IERC20(_BTRFLY);
@@ -22,6 +37,12 @@ contract Thecosomata {
 
         require(_OHM != address(0));
         OHM = _OHM;
+
+        require(_sOHM != address(0));
+        sOHM = IsOHM(_sOHM);
+
+        require(_OlympusTreasury != address(0));
+        OlympusTreasury = IOlympusTreasury(_OlympusTreasury);
     }
 
     /**
@@ -65,5 +86,19 @@ contract Thecosomata {
                 OHMReserves
             )
         );
+    }
+
+    /**
+        @notice Get remaining debt capacity with Olympus
+        @return uint256 Debt capacity
+     */
+    function getRemainingDebtCapacity() internal view returns (uint256) {
+        // Get the amount of OHM borrowed
+        uint256 debtBalance = sOHM.debtBalances(address(this));
+
+        // Get the maximum amount of OHM we can borrow
+        uint256 debtLimit = OlympusTreasury.debtLimit(address(this));
+
+        return debtLimit.sub(debtBalance);
     }
 }
