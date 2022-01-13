@@ -11,6 +11,8 @@ interface IsOHM is IERC20 {
 
 interface IOlympusTreasury {
     function debtLimit(address) external view returns (uint256);
+
+    function incurDebt(uint256 _amount, address _token) external;
 }
 
 interface IRedactedTreasury {
@@ -117,5 +119,12 @@ contract Thecosomata {
      */
     function withdrawSOHMFromTreasury(uint256 amount) internal {
         RedactedTreasury.manage(address(sOHM), amount);
+    }
+
+    /**
+        @notice Borrow OHM from Olympus treasury using sOHM balance
+     */
+    function incurOlympusDebt() internal {
+        OlympusTreasury.incurDebt(sOHM.balanceOf(address(this)), OHM);
     }
 }
