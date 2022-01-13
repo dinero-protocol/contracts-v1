@@ -43,7 +43,7 @@ describe('Thecosomata', function () {
       // Quick and dirty method of getting BTRFLY to Thecosomata
       const btrflyDonor = await impersonateAddressAndReturnSigner(
         admin,
-        '0x40da1406eeb71083290e2e068926f5fc8d8e0264' // Replace with address with BTRFLY balance if needed
+        '0x9e3421274fb4053a83917d62bd368332e9e71fe0' // Replace with address with BTRFLY balance if needed
       );
 
       await btrfly
@@ -58,9 +58,9 @@ describe('Thecosomata', function () {
 
   describe('calculateOHMAmountRequiredForLP', () => {
     it('Should calculate the amount of OHM required for pairing with the BTRFLY balance', async () => {
-      const ohm = await thecosomata._calculateOHMAmountRequiredForLP();
+      const ohm = (await thecosomata._calculateOHMAmountRequiredForLP()).toNumber();
 
-      expect(ohm).to.be.greaterThan(0);
+      expect(ohm.valueOf()).to.be.greaterThan(0);
 
       // TO DO: Verify by successfully adding liquidity
     });
