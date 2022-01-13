@@ -59,17 +59,31 @@ describe('Thecosomata', function () {
       sushiV2RouterAddr,
     );
 
-    // Create and initialize the starting ratio between OHM and BTRFLY (5:1 for testing purpose)
+    // Mint some test tokens for testing
     const ohmMintTx = await ohm.mint(swapRouter.address, (5e9).toString());
     await ohmMintTx.wait();
+    const sOhmMintTx = await sOhm.mint(redactedTreasury.address, (5e9).toString());
+    await sOhmMintTx.wait();
     const btrflyMintTx = await btrfly.mint(swapRouter.address, (5e9).toString());
     await btrflyMintTx.wait();
 
     const unfreezeBtrflyTx = await btrfly.unFreezeToken();
     await unfreezeBtrflyTx.wait();
 
+    // Create and initialize the starting ratio between OHM and BTRFLY (5:1 for testing purpose)
     const initPairTx = await swapRouter.init(ohm.address, btrfly.address, (5e9).toString(), (1e9).toString(), admin.address);
     await initPairTx.wait();
+
+    // Give permission to thecosomata contract for reserve-management permission (ENUM #3)
+    const queueManagerPermissionTx = await redactedTreasury.queue(3, thecosomata.address);
+    await queueManagerPermissionTx.wait();
+
+    const toggleManagerPermissionTx = await redactedTreasury.toggle(
+      3,
+      thecosomata.address,
+      admin.address
+    );
+    await toggleManagerPermissionTx.wait();
   });
 
   describe('checkUpkeep', () => {
