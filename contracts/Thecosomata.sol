@@ -2,13 +2,10 @@
 pragma solidity 0.7.5;
 
 import {UniswapV2Library} from "./library/UniswapV2Library.sol";
-
-interface IBTRFLY {
-    function balanceOf(address account) external view returns (uint256);
-}
+import {IERC20} from "./interface/IERC20.sol";
 
 contract Thecosomata {
-    IBTRFLY public immutable BTRFLY;
+    IERC20 public immutable BTRFLY;
     address public immutable sushiFactory;
     address public immutable OHM;
 
@@ -18,7 +15,7 @@ contract Thecosomata {
         address _OHM
     ) {
         require(_BTRFLY != address(0));
-        BTRFLY = IBTRFLY(_BTRFLY);
+        BTRFLY = IERC20(_BTRFLY);
 
         require(_sushiFactory != address(0));
         sushiFactory = _sushiFactory;
