@@ -2,7 +2,7 @@
 import { ethers, waffle } from 'hardhat';
 import { expect } from 'chai';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
-import { BTRFLY, ThecosomataInternal, OlympusERC20Token, SOlympus, OlympusTreasury, SwapRouter } from '../typechain';
+import { BTRFLY, ThecosomataInternal, OlympusERC20Token, SOlympus, OlympusTreasury, SwapRouter, REDACTEDTreasury } from '../typechain';
 import { impersonateAddressAndReturnSigner } from '../test2/utils';
 
 describe('Thecosomata', function () {
@@ -13,6 +13,7 @@ describe('Thecosomata', function () {
   let sOhm: SOlympus;
   let ohmTreasury: OlympusTreasury;
   let swapRouter: SwapRouter;
+  let redactedTreasury: REDACTEDTreasury;
 
   before(async () => {
     const sushiV2FactoryAddr: string =
@@ -25,6 +26,7 @@ describe('Thecosomata', function () {
     const BTRFLY = await ethers.getContractFactory('BTRFLY');
     const OHMTreasury = await ethers.getContractFactory('OlympusTreasury');
     const SwapRouter = await ethers.getContractFactory('SwapRouter');
+    const REDACTEDTreasury = await ethers.getContractFactory('REDACTEDTreasury');
     // NOTE: We are using ThecosomataInternal in order to test internal methods
     const Thecosomata = await ethers.getContractFactory('ThecosomataInternal');
 
@@ -35,10 +37,26 @@ describe('Thecosomata', function () {
     ohmTreasury = await OHMTreasury.deploy(ohm.address, sOhm.address);
     btrfly = await BTRFLY.deploy();
     swapRouter = await SwapRouter.deploy(sushiV2RouterAddr, sushiV2FactoryAddr);
+    redactedTreasury = await REDACTEDTreasury.deploy(
+      btrfly.address,
+      ohm.address,
+      sOhm.address,
+      ohm.address,
+      sOhm.address,
+      admin.address, // placeholder for bond contract, not used here
+      0,
+      0,
+      0,
+      0
+    );
     thecosomata = await Thecosomata.deploy(
       btrfly.address,
       sushiV2FactoryAddr,
       ohm.address,
+      sOhm.address,
+      ohmTreasury.address,
+      redactedTreasury.address,
+      sushiV2RouterAddr,
     );
 
     // Create and initialize the starting ratio between OHM and BTRFLY (5:1 for testing purpose)
@@ -76,9 +94,11 @@ describe('Thecosomata', function () {
 
   describe('calculateOHMAmountRequiredForLP', () => {
     it('Should calculate the amount of OHM required for pairing with the BTRFLY balance', async () => {
-      const ohm = await thecosomata._calculateOHMAmountRequiredForLP();
+      const ohm = (
+        await thecosomata._calculateOHMAmountRequiredForLP()
+      ).toNumber();
 
-      expect(ohm).to.be.greaterThan(0);
+      expect(ohm.valueOf()).to.be.greaterThan(0);
 
       // TO DO: Verify by successfully adding liquidity
     });

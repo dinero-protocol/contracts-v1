@@ -7,8 +7,12 @@ contract ThecosomataInternal is Thecosomata {
     constructor(
         address BTRFLY_,
         address sushiFactory_,
-        address OHM_
-    ) Thecosomata(BTRFLY_, sushiFactory_, OHM_) {}
+        address OHM_,
+        address _sOHM,
+        address _OlympusTreasury,
+        address _RedactedTreasury,
+        address _SushiRouter
+    ) Thecosomata(BTRFLY_, sushiFactory_, OHM_, _sOHM, _OlympusTreasury, _RedactedTreasury, _SushiRouter) {}
 
     function _calculateOHMAmountRequiredForLP() public view returns (uint256) {
         return calculateOHMAmountRequiredForLP();
