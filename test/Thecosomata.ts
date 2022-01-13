@@ -2,12 +2,12 @@
 import { ethers, waffle } from 'hardhat';
 import { expect } from 'chai';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
-import { BTRFLY, Thecosomata } from '../typechain';
+import { BTRFLY, ThecosomataInternal } from '../typechain';
 import { getBTRFLY, impersonateAddressAndReturnSigner } from '../test2/utils';
 
 describe('Thecosomata', function () {
   let admin: SignerWithAddress;
-  let thecosomata: Thecosomata;
+  let thecosomata: ThecosomataInternal;
   let btrfly: BTRFLY;
 
   before(async () => {
@@ -16,7 +16,8 @@ describe('Thecosomata', function () {
       '0xc0aee478e3658e2610c5f7a4a2e1777ce9e4f2ac';
     const ohmAddr: string = '0x64aa3364F17a4D01c6f1751Fd97C2BD3D7e7f1D5';
 
-    const Thecosomata = await ethers.getContractFactory('Thecosomata');
+    // NOTE: We are using ThecosomataInternal in order to test internal methods
+    const Thecosomata = await ethers.getContractFactory('ThecosomataInternal');
 
     [admin] = await ethers.getSigners();
     thecosomata = await Thecosomata.deploy(
@@ -52,6 +53,16 @@ describe('Thecosomata', function () {
       const [upkeepNeeded] = await thecosomata.checkUpkeep(new Uint8Array());
 
       expect(upkeepNeeded).to.equal(true);
+    });
+  });
+
+  describe('calculateOHMAmountRequiredForLP', () => {
+    it('Should calculate the amount of OHM required for pairing with the BTRFLY balance', async () => {
+      const ohm = await thecosomata._calculateOHMAmountRequiredForLP();
+
+      expect(ohm).to.be.greaterThan(0);
+
+      // TO DO: Verify by successfully adding liquidity
     });
   });
 });

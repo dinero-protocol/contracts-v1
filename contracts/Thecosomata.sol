@@ -55,7 +55,7 @@ contract Thecosomata {
         @notice Calculates the optimal amount of OHM for pairing with BTRFLY balance when adding liquidity
         @return uint256 Optimal OHM amount for LP
      */
-    function calculateOHMAmountRequiredForLP() private view returns (uint256) {
+    function calculateOHMAmountRequiredForLP() internal view returns (uint256) {
         // Fetch reserves of both OHM and BTRFLY from Sushi LP
         (uint256 OHMReserves, uint256 BTRFLYReserves) = UniswapV2Library
             .getReserves(sushiFactory, OHM, address(BTRFLY));
