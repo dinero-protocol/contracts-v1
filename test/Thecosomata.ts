@@ -1,10 +1,12 @@
 /* eslint "prettier/prettier": 0 */
-import { ethers } from 'hardhat';
+import { ethers, waffle } from 'hardhat';
 import { expect } from 'chai';
+import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { BTRFLY, Thecosomata } from '../typechain';
-import { getBTRFLY } from '../test2/utils';
+import { getBTRFLY, impersonateAddressAndReturnSigner } from '../test2/utils';
 
 describe('Thecosomata', function () {
+  let admin: SignerWithAddress;
   let thecosomata: Thecosomata;
   let btrfly: BTRFLY;
 
@@ -16,6 +18,7 @@ describe('Thecosomata', function () {
 
     const Thecosomata = await ethers.getContractFactory('Thecosomata');
 
+    [admin] = await ethers.getSigners();
     thecosomata = await Thecosomata.deploy(
       btrflyAddr,
       sushiV2FactoryAddr,
@@ -31,6 +34,24 @@ describe('Thecosomata', function () {
 
       expect(btrflyBalance).to.equal(0);
       expect(upkeepNeeded).to.equal(false);
+    });
+
+    it('Should request upkeep if BTRFLY balance is above 0', async () => {
+      // List of BTRFLY holders
+      // https://etherscan.io/token/0xC0d4Ceb216B3BA9C3701B291766fDCbA977ceC3A#balances
+      // Quick and dirty method of getting BTRFLY to Thecosomata
+      const btrflyDonor = await impersonateAddressAndReturnSigner(
+        admin,
+        '0x40da1406eeb71083290e2e068926f5fc8d8e0264' // Replace with address with BTRFLY balance if needed
+      );
+
+      await btrfly
+        .connect(btrflyDonor)
+        .transfer(thecosomata.address, (1e9).toString());
+
+      const [upkeepNeeded] = await thecosomata.checkUpkeep(new Uint8Array());
+
+      expect(upkeepNeeded).to.equal(true);
     });
   });
 });
