@@ -12,9 +12,23 @@ contract ThecosomataInternal is Thecosomata {
         address _OlympusTreasury,
         address _RedactedTreasury,
         address _SushiRouter
-    ) Thecosomata(BTRFLY_, sushiFactory_, OHM_, _sOHM, _OlympusTreasury, _RedactedTreasury, _SushiRouter) {}
+    )
+        Thecosomata(
+            BTRFLY_,
+            sushiFactory_,
+            OHM_,
+            _sOHM,
+            _OlympusTreasury,
+            _RedactedTreasury,
+            _SushiRouter
+        )
+    {}
 
     function _calculateOHMAmountRequiredForLP() public view returns (uint256) {
         return calculateOHMAmountRequiredForLP();
+    }
+
+    function _withdrawSOHMFromTreasury(uint256 amount) public {
+        return withdrawSOHMFromTreasury(amount);
     }
 }

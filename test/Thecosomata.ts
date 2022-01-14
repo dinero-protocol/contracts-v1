@@ -193,18 +193,57 @@ describe('Thecosomata', function () {
     });
   });
 
-  describe('performUpkeep', () => {
-    it('Should fully perform up-keep if BTRFLY balance is above 0', async () => {
-      // Test the up-keep
-      await thecosomata.performUpkeep(new Uint8Array());
-
-      // Check LP-token balance
-      const lpBalance = await swapRouter.lpBalance(
-        redactedTreasury.address,
-        ohm.address,
-        btrfly.address
+  describe('withdrawSOHMFromTreasury', () => {
+    it('Should withdraw sOHM from the Redacted treasury', async () => {
+      // Check sOHM balance of Redacted treasury before withdraw
+      const redactedBalanceBeforeWithdrawal: number = Number(
+        (await sOhm.balanceOf(redactedTreasury.address)).toString()
       );
-      expect(lpBalance.gt(0)).to.equal(true);
+      // Check sOHM balance of Thecosomata before withdraw
+      const thecosomataBalanceBeforeWithdrawal: number = Number(
+        (await sOhm.balanceOf(thecosomata.address)).toString()
+      );
+      const sOhmWithdrawalAmount =
+        await thecosomata._calculateOHMAmountRequiredForLP();
+
+      // Withdraw sOHM to Thecosomata
+      await thecosomata._withdrawSOHMFromTreasury(sOhmWithdrawalAmount);
+
+      // Check sOHM balance of Redacted treasury after withdraw
+      const redactedBalanceAfterWithdrawal: number = Number(
+        (await sOhm.balanceOf(redactedTreasury.address)).toString()
+      );
+      // Check sOHM balance of Thecosomata after withdraw
+      const thecosomataBalanceAfterWithdrawal: number = Number(
+        (await sOhm.balanceOf(thecosomata.address)).toString()
+      );
+
+      expect(redactedBalanceBeforeWithdrawal).to.equal(
+        redactedTreasurySOhmDeposit
+      );
+      expect(thecosomataBalanceBeforeWithdrawal).to.equal(0);
+      expect(redactedBalanceAfterWithdrawal).to.equal(
+        redactedBalanceBeforeWithdrawal -
+          Number(sOhmWithdrawalAmount.toString())
+      );
+      expect(thecosomataBalanceAfterWithdrawal).to.equal(
+        Number(sOhmWithdrawalAmount.toString())
+      );
     });
   });
+
+  // describe('performUpkeep', () => {
+  //   it('Should fully perform up-keep if BTRFLY balance is above 0', async () => {
+  //     // Test the up-keep
+  //     await thecosomata.performUpkeep(new Uint8Array());
+
+  //     // Check LP-token balance
+  //     const lpBalance = await swapRouter.lpBalance(
+  //       redactedTreasury.address,
+  //       ohm.address,
+  //       btrfly.address
+  //     );
+  //     expect(lpBalance.gt(0)).to.equal(true);
+  //   });
+  // });
 });
