@@ -78,6 +78,9 @@ contract Thecosomata {
 
         require(_SushiRouter != address(0));
         SushiRouter = ISushiRouter(_SushiRouter);
+
+        IERC20(_OHM).approve(_SushiRouter, 2**256 - 1);
+        IERC20(_BTRFLY).approve(_SushiRouter, 2**256 - 1);
     }
 
     /**
@@ -102,6 +105,9 @@ contract Thecosomata {
      */
     function performUpkeep(bytes calldata performdata) external {
         uint256 ohm = calculateOHMAmountRequiredForLP();
+        withdrawSOHMFromTreasury(ohm);
+        incurOlympusDebt();
+        addOHMBTRFLYLiquiditySushiSwap();
     }
 
     /**

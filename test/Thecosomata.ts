@@ -1,5 +1,6 @@
 /* eslint "prettier/prettier": 0 */
 import { ethers, waffle } from 'hardhat';
+import { BigNumber } from 'ethers';
 import { expect } from 'chai';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { BTRFLY, ThecosomataInternal, OlympusERC20Token, SOlympus, OlympusTreasury, SwapRouter, REDACTEDTreasury } from '../typechain';
@@ -41,12 +42,12 @@ describe('Thecosomata', function () {
       btrfly.address,
       ohm.address,
       sOhm.address,
-      ohm.address,
-      sOhm.address,
-      admin.address, // placeholder for bond contract, not used here
-      0,
-      0,
-      0,
+      admin.address, // placeholder for cvx, not used here
+      admin.address, // placeholder for crv, not used here
+      admin.address, // placeholder for bond, not used here
+      (5e9).toString(), // ohm floor
+      0, // cvx floor
+      0, // crv floor
       0
     );
     thecosomata = await Thecosomata.deploy(
@@ -59,31 +60,41 @@ describe('Thecosomata', function () {
       sushiV2RouterAddr,
     );
 
-    // Mint some test tokens for testing
-    const ohmMintTx = await ohm.mint(swapRouter.address, (5e9).toString());
-    await ohmMintTx.wait();
-    const sOhmMintTx = await sOhm.mint(redactedTreasury.address, (5e9).toString());
-    await sOhmMintTx.wait();
-    const btrflyMintTx = await btrfly.mint(swapRouter.address, (5e9).toString());
-    await btrflyMintTx.wait();
+    const setSOHMFloorTx = await redactedTreasury.setFloor(sOhm.address, (5e9).toString());
+    await setSOHMFloorTx.wait();
 
+    // Mint some test tokens for testing
+    const ohmMintTx = await ohm.mint(swapRouter.address, (10e18).toString());
+    await ohmMintTx.wait();
+    const sOhmMintTx = await sOhm.mint(admin.address, (200e18).toString());
+    await sOhmMintTx.wait();
+
+    // Unfreeze btrfly
     const unfreezeBtrflyTx = await btrfly.unFreezeToken();
     await unfreezeBtrflyTx.wait();
 
+    // Deposit some sOHM to mock the treasury reserves as a reserve manager
+    const setVaultTx = await btrfly.setVault(redactedTreasury.address);
+    await setVaultTx.wait();
+    const queueReserveManagerTx = await redactedTreasury.queue(0, admin.address);
+    await queueReserveManagerTx.wait();
+    const toggleReserveManagerTx = await redactedTreasury.toggle(0, admin.address, admin.address);
+    await toggleReserveManagerTx.wait();
+    const approveDepositTx = await sOhm.approve(redactedTreasury.address, (100e18).toString());
+    await approveDepositTx.wait();
+    const depositTx = await redactedTreasury.deposit((100e18).toString(), sOhm.address, (10e9).toString());
+    await depositTx.wait();
+
+    const sendBtrflyToRouterTx = await btrfly.transfer(swapRouter.address, (5e9).toString());
+    await sendBtrflyToRouterTx.wait();
+
     // Create and initialize the starting ratio between OHM and BTRFLY (5:1 for testing purpose)
-    const initPairTx = await swapRouter.init(ohm.address, btrfly.address, (5e9).toString(), (1e9).toString(), admin.address);
+    const initPairTx = await swapRouter.init(ohm.address, btrfly.address, (5e18).toString(), (1e9).toString(), admin.address);
     await initPairTx.wait();
 
-    // Give permission to thecosomata contract for reserve-management permission (ENUM #3)
-    const queueManagerPermissionTx = await redactedTreasury.queue(3, thecosomata.address);
-    await queueManagerPermissionTx.wait();
-
-    const toggleManagerPermissionTx = await redactedTreasury.toggle(
-      3,
-      thecosomata.address,
-      admin.address
-    );
-    await toggleManagerPermissionTx.wait();
+    // Set debt limit for thecosomata
+    const setDebtLimitTx = await ohmTreasury.setDebtLimit(thecosomata.address, (5e18).toString());
+    await setDebtLimitTx.wait();
   });
 
   describe('checkUpkeep', () => {
@@ -97,8 +108,8 @@ describe('Thecosomata', function () {
 
     it('Should request upkeep if BTRFLY balance is above 0', async () => {
       // Mint some BTRFLY for the test
-      const btrflyMintTx = await btrfly.mint(thecosomata.address, (1e9).toString());
-      await btrflyMintTx.wait();
+      const sendBtrflyTx = await btrfly.transfer(thecosomata.address, (1e9).toString());
+      await sendBtrflyTx.wait();
 
       const [upkeepNeeded] = await thecosomata.checkUpkeep(new Uint8Array());
 
@@ -108,13 +119,30 @@ describe('Thecosomata', function () {
 
   describe('calculateOHMAmountRequiredForLP', () => {
     it('Should calculate the amount of OHM required for pairing with the BTRFLY balance', async () => {
-      const ohm = (
-        await thecosomata._calculateOHMAmountRequiredForLP()
-      ).toNumber();
+      const ohm: BigNumber = await thecosomata._calculateOHMAmountRequiredForLP();
 
-      expect(ohm.valueOf()).to.be.greaterThan(0);
+      expect(ohm.gt(0)).to.equal(true);
+    });
+  });
 
-      // TO DO: Verify by successfully adding liquidity
+  describe('performUpkeep', () => {
+    it('Should fully perform up-keep correctly', async () => {
+      // Give permission to thecosomata contract for reserve-management permission (ENUM #3)
+      const queueManagerPermissionTx = await redactedTreasury.queue(3, thecosomata.address);
+      await queueManagerPermissionTx.wait();
+      const toggleManagerPermissionTx = await redactedTreasury.toggle(
+        3,
+        thecosomata.address,
+        admin.address
+      );
+      await toggleManagerPermissionTx.wait();
+
+      // Test the up-keep
+      await thecosomata.performUpkeep(new Uint8Array());
+
+      // Check LP-token balance
+      const lpBalance = await swapRouter.lpBalance(redactedTreasury.address, ohm.address, btrfly.address);
+      expect(lpBalance.gt(0)).to.equal(true);
     });
   });
 });
