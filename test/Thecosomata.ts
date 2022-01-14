@@ -116,7 +116,6 @@ describe('Thecosomata', function () {
     });
 
     it('Should request upkeep if BTRFLY balance is above 0', async () => {
-      // Mint some BTRFLY for the test
       const sendBtrflyTx = await btrfly.transfer(thecosomata.address, (1e9).toString());
       await sendBtrflyTx.wait();
 
@@ -135,7 +134,7 @@ describe('Thecosomata', function () {
   });
 
   describe('performUpkeep', () => {
-    it('Should fully perform up-keep correctly', async () => {
+    it('Should fully perform up-keep if BTRFLY balance is above 0', async () => {
       // Test the up-keep
       await thecosomata.performUpkeep(new Uint8Array());
 
