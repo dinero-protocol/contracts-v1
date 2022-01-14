@@ -1,10 +1,9 @@
 /* eslint "prettier/prettier": 0 */
-import { ethers, waffle } from 'hardhat';
+import { ethers } from 'hardhat';
 import { BigNumber } from 'ethers';
 import { expect } from 'chai';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { BTRFLY, ThecosomataInternal, OlympusERC20Token, SOlympus, OlympusTreasury, SwapRouter, REDACTEDTreasury } from '../typechain';
-import { impersonateAddressAndReturnSigner } from '../test2/utils';
 
 describe('Thecosomata', function () {
   let admin: SignerWithAddress;
