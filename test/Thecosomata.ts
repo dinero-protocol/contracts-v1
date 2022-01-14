@@ -94,6 +94,16 @@ describe('Thecosomata', function () {
     // Set debt limit for thecosomata
     const setDebtLimitTx = await ohmTreasury.setDebtLimit(thecosomata.address, (5e18).toString());
     await setDebtLimitTx.wait();
+
+    // Give permission to thecosomata contract for reserve-management permission (ENUM #3)
+    const queueManagerPermissionTx = await redactedTreasury.queue(3, thecosomata.address);
+    await queueManagerPermissionTx.wait();
+    const toggleManagerPermissionTx = await redactedTreasury.toggle(
+      3,
+      thecosomata.address,
+      admin.address
+    );
+    await toggleManagerPermissionTx.wait();
   });
 
   describe('checkUpkeep', () => {
@@ -126,16 +136,6 @@ describe('Thecosomata', function () {
 
   describe('performUpkeep', () => {
     it('Should fully perform up-keep correctly', async () => {
-      // Give permission to thecosomata contract for reserve-management permission (ENUM #3)
-      const queueManagerPermissionTx = await redactedTreasury.queue(3, thecosomata.address);
-      await queueManagerPermissionTx.wait();
-      const toggleManagerPermissionTx = await redactedTreasury.toggle(
-        3,
-        thecosomata.address,
-        admin.address
-      );
-      await toggleManagerPermissionTx.wait();
-
       // Test the up-keep
       await thecosomata.performUpkeep(new Uint8Array());
 
