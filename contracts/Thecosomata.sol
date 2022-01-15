@@ -106,7 +106,7 @@ contract Thecosomata {
     function performUpkeep(bytes calldata performdata) external {
         uint256 ohm = calculateOHMAmountRequiredForLP();
         withdrawSOHMFromTreasury(ohm);
-        incurOlympusDebt();
+        incurOlympusDebt(ohm);
         addOHMBTRFLYLiquiditySushiSwap();
     }
 
@@ -152,10 +152,10 @@ contract Thecosomata {
     }
 
     /**
-        @notice Borrow OHM from Olympus treasury using sOHM balance
+        @notice Borrow OHM from Olympus treasury using uncollateralized sOHM
      */
-    function incurOlympusDebt() internal {
-        OlympusTreasury.incurDebt(sOHM.balanceOf(address(this)), OHM);
+    function incurOlympusDebt(uint256 amount) internal {
+        OlympusTreasury.incurDebt(amount, OHM);
     }
 
     /**

@@ -30,6 +30,9 @@ describe('Thecosomata', function () {
   const redactedTreasurySOhmDeposit = 100e18;
   const adminBtrflyReceivedForSOhmDeposit: number = 10e9;
   const olympusTreasuryDebtLimit: number = redactedTreasurySOhmDeposit / 2;
+  const swapRouterBtrflyLiquidity: number = 1e9;
+  const swapRouterOhmLiquidity: number = 5e18;
+  let sOhmWithdrawalAmount: BigNumber;
 
   before(async () => {
     const sushiV2FactoryAddr: string =
@@ -127,7 +130,7 @@ describe('Thecosomata', function () {
 
     const sendBtrflyToRouterTx = await btrfly.transfer(
       swapRouter.address,
-      (5e9).toString() // TO DO: Set as variable (awaiting answer)
+      swapRouterBtrflyLiquidity.toString() // TO DO: Set as variable (awaiting answer)
     );
     await sendBtrflyToRouterTx.wait();
 
@@ -135,8 +138,8 @@ describe('Thecosomata', function () {
     const initPairTx = await swapRouter.init(
       ohm.address,
       btrfly.address,
-      (5e18).toString(), // TO DO: Set as variable (awaiting answer)
-      (1e9).toString(), // TO DO: Set as variable (awaiting answer)
+      swapRouterOhmLiquidity.toString(), // TO DO: Set as variable (awaiting answer)
+      swapRouterBtrflyLiquidity.toString(), // TO DO: Set as variable (awaiting answer)
       admin.address
     );
     await initPairTx.wait();
@@ -203,7 +206,7 @@ describe('Thecosomata', function () {
       const thecosomataBalanceBeforeWithdrawal: number = Number(
         (await sOhm.balanceOf(thecosomata.address)).toString()
       );
-      const sOhmWithdrawalAmount =
+      sOhmWithdrawalAmount =
         await thecosomata._calculateOHMAmountRequiredForLP();
 
       // Withdraw sOHM to Thecosomata
@@ -227,6 +230,37 @@ describe('Thecosomata', function () {
           Number(sOhmWithdrawalAmount.toString())
       );
       expect(thecosomataBalanceAfterWithdrawal).to.equal(
+        Number(sOhmWithdrawalAmount.toString())
+      );
+    });
+  });
+
+  describe('incurOlympusDebt', () => {
+    it('Should use sOHM balance as collateral to borrow OHM', async () => {
+      const sOhmBalanceBeforeBorrow: number = Number(
+        await (await sOhm.balanceOf(thecosomata.address)).toString()
+      );
+      const ohmBalanceBeforeBorrow: number = Number(
+        await (await ohm.balanceOf(thecosomata.address)).toString()
+      );
+
+      await thecosomata._incurOlympusDebt(sOhmWithdrawalAmount);
+
+      const sOhmBalanceAfterBorrow: number = Number(
+        await (await sOhm.balanceOf(thecosomata.address)).toString()
+      );
+      const ohmBalanceAfterBorrow: number = Number(
+        await (await ohm.balanceOf(thecosomata.address)).toString()
+      );
+
+      expect(sOhmBalanceBeforeBorrow).to.equal(
+        Number(sOhmWithdrawalAmount.toString())
+      );
+      expect(ohmBalanceBeforeBorrow).to.equal(0);
+      expect(sOhmBalanceAfterBorrow).to.equal(
+        Number(sOhmWithdrawalAmount.toString())
+      );
+      expect(ohmBalanceAfterBorrow).to.equal(
         Number(sOhmWithdrawalAmount.toString())
       );
     });

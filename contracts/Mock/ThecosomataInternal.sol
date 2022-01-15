@@ -31,4 +31,8 @@ contract ThecosomataInternal is Thecosomata {
     function _withdrawSOHMFromTreasury(uint256 amount) public {
         return withdrawSOHMFromTreasury(amount);
     }
+
+    function _incurOlympusDebt(uint256 amount) public {
+        return incurOlympusDebt(amount);
+    }
 }
