@@ -11,7 +11,8 @@ contract ThecosomataInternal is Thecosomata {
         address _sOHM,
         address _OlympusTreasury,
         address _RedactedTreasury,
-        address _SushiRouter
+        address _SushiRouter,
+        uint256 _debtFee
     )
         Thecosomata(
             BTRFLY_,
@@ -20,7 +21,8 @@ contract ThecosomataInternal is Thecosomata {
             _sOHM,
             _OlympusTreasury,
             _RedactedTreasury,
-            _SushiRouter
+            _SushiRouter,
+            _debtFee
         )
     {}
 
@@ -34,5 +36,9 @@ contract ThecosomataInternal is Thecosomata {
 
     function _incurOlympusDebt(uint256 amount) public {
         return incurOlympusDebt(amount);
+    }
+
+    function _addOHMBTRFLYLiquiditySushiSwap() public {
+        return addOHMBTRFLYLiquiditySushiSwap();
     }
 }

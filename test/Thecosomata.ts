@@ -32,6 +32,7 @@ describe('Thecosomata', function () {
   const olympusTreasuryDebtLimit: number = redactedTreasurySOhmDeposit / 2;
   const swapRouterBtrflyLiquidity: number = 1e9;
   const swapRouterOhmLiquidity: number = 5e18;
+  const debtFee: number = 5000;
   let sOhmWithdrawalAmount: BigNumber;
 
   before(async () => {
@@ -77,7 +78,8 @@ describe('Thecosomata', function () {
       sOhm.address,
       ohmTreasury.address,
       redactedTreasury.address,
-      sushiV2RouterAddr
+      sushiV2RouterAddr,
+      debtFee
     );
 
     const setSOHMFloorTx = await redactedTreasury.setFloor(
@@ -263,6 +265,26 @@ describe('Thecosomata', function () {
       expect(ohmBalanceAfterBorrow).to.equal(
         Number(sOhmWithdrawalAmount.toString())
       );
+    });
+  });
+
+  describe('addOHMBTRFLYLiquiditySushiSwap', () => {
+    it('Should add OHM-BTRFLY to the LP and transfer the LP tokens', async () => {
+      const addLiquidity = await (
+        await thecosomata._addOHMBTRFLYLiquiditySushiSwap()
+      ).wait();
+      const addLiquidityEventArgs =
+        addLiquidity.events &&
+        addLiquidity.events[addLiquidity.events.length - 1].args;
+      const olympusFee: BigNumber =
+        addLiquidityEventArgs && addLiquidityEventArgs.olympusFee;
+      const redactedDeposit: BigNumber =
+        addLiquidityEventArgs && addLiquidityEventArgs.redactedDeposit;
+
+      // TO DO: Confirm that Olympus only receives what it's supposed to
+
+      expect(Number(olympusFee.toString())).to.be.greaterThan(0);
+      expect(Number(redactedDeposit.toString())).to.be.greaterThan(0);
     });
   });
 

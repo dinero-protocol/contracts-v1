@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity 0.7.5;
 
+import "hardhat/console.sol";
 import {UniswapV2Library} from "./library/UniswapV2Library.sol";
 import {IERC20} from "./interface/IERC20.sol";
 import {SafeMath} from "./library/SafeMath.sol";
@@ -38,6 +39,10 @@ interface ISushiRouter {
         );
 }
 
+interface ISushiFactory {
+    function getPair(address tokenA, address tokenB) external returns (address);
+}
+
 contract Thecosomata {
     using SafeMath for uint256;
 
@@ -48,6 +53,14 @@ contract Thecosomata {
     IOlympusTreasury public immutable OlympusTreasury;
     IRedactedTreasury public immutable RedactedTreasury;
     ISushiRouter public immutable SushiRouter;
+    uint256 public debtFee; // in ten-thousandths ( 5000 = 0.5% )
+
+    event AddedLiquidity(
+        uint256 btrfly,
+        uint256 ohm,
+        uint256 olympusFee,
+        uint256 redactedDeposit
+    );
 
     constructor(
         address _BTRFLY,
@@ -56,7 +69,8 @@ contract Thecosomata {
         address _sOHM,
         address _OlympusTreasury,
         address _RedactedTreasury,
-        address _SushiRouter
+        address _SushiRouter,
+        uint256 _debtFee
     ) {
         require(_BTRFLY != address(0));
         BTRFLY = IERC20(_BTRFLY);
@@ -81,6 +95,8 @@ contract Thecosomata {
 
         IERC20(_OHM).approve(_SushiRouter, 2**256 - 1);
         IERC20(_BTRFLY).approve(_SushiRouter, 2**256 - 1);
+
+        debtFee = _debtFee;
     }
 
     /**
@@ -162,18 +178,49 @@ contract Thecosomata {
         @notice Add OHM and BTRFLY as liquidity to Sushi LP
      */
     function addOHMBTRFLYLiquiditySushiSwap() internal {
-        uint256 BTRFLYBalance = BTRFLY.balanceOf(address(this));
-        uint256 OHMBalance = IERC20(OHM).balanceOf(address(this));
+        uint256 btrflyBalance = BTRFLY.balanceOf(address(this));
+        uint256 ohmBalance = IERC20(OHM).balanceOf(address(this));
 
         SushiRouter.addLiquidity(
             address(BTRFLY),
             OHM,
-            BTRFLYBalance,
-            OHMBalance,
-            BTRFLYBalance,
-            OHMBalance,
-            address(RedactedTreasury), // Mint LP tokens directly to Redacted treasury
+            btrflyBalance,
+            ohmBalance,
+            btrflyBalance,
+            ohmBalance,
+            address(this), // Mint LP tokens directly to Redacted treasury
             block.timestamp + 5 minutes
+        );
+
+        IERC20 lpToken = IERC20(
+            ISushiFactory(sushiFactory).getPair(OHM, address(BTRFLY))
+        );
+
+        uint256 olympusFee;
+        uint256 redactedDeposit;
+
+        if (debtFee > 0) {
+            // Send Olympus fee in the form of LP tokens
+            olympusFee = lpToken.balanceOf(address(this)).mul(debtFee).div(
+                1000000
+            );
+
+            lpToken.transfer(address(OlympusTreasury), olympusFee);
+        }
+
+        redactedDeposit = lpToken.balanceOf(address(this));
+
+        // Transfer LP token balance to Redacted treasury
+        lpToken.transfer(
+            address(RedactedTreasury),
+            lpToken.balanceOf(address(this))
+        );
+
+        emit AddedLiquidity(
+            btrflyBalance,
+            ohmBalance,
+            olympusFee,
+            redactedDeposit
         );
     }
 }
