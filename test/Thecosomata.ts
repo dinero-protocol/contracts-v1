@@ -15,6 +15,7 @@ import {
 
 describe("Thecosomata", function () {
   let admin: SignerWithAddress;
+  let simp: SignerWithAddress;
   let thecosomata: ThecosomataInternal;
   let btrfly: BTRFLY;
   let ohm: OlympusERC20Token;
@@ -52,7 +53,7 @@ describe("Thecosomata", function () {
     // NOTE: We are using ThecosomataInternal in order to test internal methods
     const Thecosomata = await ethers.getContractFactory("ThecosomataInternal");
 
-    [admin] = await ethers.getSigners();
+    [admin, simp] = await ethers.getSigners();
 
     ohm = await OHM.deploy();
     sOhm = await SOHM.deploy();
@@ -290,6 +291,30 @@ describe("Thecosomata", function () {
       expect(
         Math.floor(((olympusFee + redactedDeposit) * 5000) / 1000000)
       ).to.equal(olympusFee);
+    });
+  });
+
+  describe("setDebtFee", () => {
+    it("Should change the debt fee", async () => {
+      const newDebtFee: number = 1;
+      const debtFeeBeforeChange = Number(
+        (await thecosomata.debtFee()).toString()
+      );
+      const setDebtFeeResponse = await (
+        await thecosomata.setDebtFee(newDebtFee)
+      ).wait();
+      const debtFeeAfterChange: number = Number(
+        ethers.utils.defaultAbiCoder
+          .decode(["uint256"], setDebtFeeResponse.logs[0].data)
+          .toString()
+      );
+
+      expect(debtFeeBeforeChange).to.equal(debtFee);
+      expect(debtFeeAfterChange).to.equal(newDebtFee);
+    });
+
+    it("Should only be callable by the owner", async () => {
+      await expect(thecosomata.connect(simp).setDebtFee(1)).to.be.reverted;
     });
   });
 

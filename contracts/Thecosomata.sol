@@ -5,6 +5,7 @@ import "hardhat/console.sol";
 import {UniswapV2Library} from "./library/UniswapV2Library.sol";
 import {IERC20} from "./interface/IERC20.sol";
 import {SafeMath} from "./library/SafeMath.sol";
+import {Ownable} from "./base/Ownable.sol";
 
 interface IsOHM is IERC20 {
     function debtBalances(address _address) external view returns (uint256);
@@ -43,7 +44,7 @@ interface ISushiFactory {
     function getPair(address tokenA, address tokenB) external returns (address);
 }
 
-contract Thecosomata {
+contract Thecosomata is Ownable {
     using SafeMath for uint256;
 
     address public immutable BTRFLY;
@@ -59,8 +60,9 @@ contract Thecosomata {
         uint256 btrfly,
         uint256 ohm,
         uint256 olympusFee,
-        uint256 redactedDeposit
+        uint256 slpMinted
     );
+    event SetDebtFee(uint256 updatedDebtFee);
 
     constructor(
         address _BTRFLY,
@@ -97,6 +99,17 @@ contract Thecosomata {
         IERC20(_BTRFLY).approve(_SushiRouter, 2**256 - 1);
 
         debtFee = _debtFee;
+    }
+
+    /**
+        @notice Set debt fee
+        @param  _debtFee uint256 New debt fee
+        @return          uint256 Debt fee post-set
+     */
+    function setDebtFee(uint256 _debtFee) external onlyOwner returns (uint256) {
+        debtFee = _debtFee;
+
+        emit SetDebtFee(debtFee);
     }
 
     /**
