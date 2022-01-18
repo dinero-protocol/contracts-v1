@@ -1,8 +1,8 @@
 /* eslint "prettier/prettier": 0 */
-import { ethers } from 'hardhat';
-import { BigNumber } from 'ethers';
-import { expect } from 'chai';
-import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
+import { ethers } from "hardhat";
+import { BigNumber } from "ethers";
+import { expect } from "chai";
+import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import {
   BTRFLY,
   ThecosomataInternal,
@@ -11,9 +11,9 @@ import {
   OlympusTreasury,
   SwapRouter,
   REDACTEDTreasury,
-} from '../typechain';
+} from "../typechain";
 
-describe('Thecosomata', function () {
+describe("Thecosomata", function () {
   let admin: SignerWithAddress;
   let thecosomata: ThecosomataInternal;
   let btrfly: BTRFLY;
@@ -37,20 +37,20 @@ describe('Thecosomata', function () {
 
   before(async () => {
     const sushiV2FactoryAddr: string =
-      '0xc0aee478e3658e2610c5f7a4a2e1777ce9e4f2ac';
+      "0xc0aee478e3658e2610c5f7a4a2e1777ce9e4f2ac";
     const sushiV2RouterAddr: string =
-      '0xd9e1ce17f2641f24ae83637ab66a2cca9c378b9f';
+      "0xd9e1ce17f2641f24ae83637ab66a2cca9c378b9f";
 
-    const OHM = await ethers.getContractFactory('OlympusERC20Token');
-    const SOHM = await ethers.getContractFactory('SOlympus');
-    const BTRFLY = await ethers.getContractFactory('BTRFLY');
-    const OHMTreasury = await ethers.getContractFactory('OlympusTreasury');
-    const SwapRouter = await ethers.getContractFactory('SwapRouter');
+    const OHM = await ethers.getContractFactory("OlympusERC20Token");
+    const SOHM = await ethers.getContractFactory("SOlympus");
+    const BTRFLY = await ethers.getContractFactory("BTRFLY");
+    const OHMTreasury = await ethers.getContractFactory("OlympusTreasury");
+    const SwapRouter = await ethers.getContractFactory("SwapRouter");
     const REDACTEDTreasury = await ethers.getContractFactory(
-      'REDACTEDTreasury'
+      "REDACTEDTreasury"
     );
     // NOTE: We are using ThecosomataInternal in order to test internal methods
-    const Thecosomata = await ethers.getContractFactory('ThecosomataInternal');
+    const Thecosomata = await ethers.getContractFactory("ThecosomataInternal");
 
     [admin] = await ethers.getSigners();
 
@@ -167,8 +167,8 @@ describe('Thecosomata', function () {
     await toggleManagerPermissionTx.wait();
   });
 
-  describe('checkUpkeep', () => {
-    it('Should not request upkeep if BTRFLY balance is 0', async () => {
+  describe("checkUpkeep", () => {
+    it("Should not request upkeep if BTRFLY balance is 0", async () => {
       const btrflyBalance = await btrfly.balanceOf(thecosomata.address);
       const [upkeepNeeded] = await thecosomata.checkUpkeep(new Uint8Array());
 
@@ -176,7 +176,7 @@ describe('Thecosomata', function () {
       expect(upkeepNeeded).to.equal(false);
     });
 
-    it('Should request upkeep if BTRFLY balance is above 0', async () => {
+    it("Should request upkeep if BTRFLY balance is above 0", async () => {
       const sendBtrflyTx = await btrfly.transfer(
         thecosomata.address,
         (1e9).toString()
@@ -189,8 +189,8 @@ describe('Thecosomata', function () {
     });
   });
 
-  describe('calculateOHMAmountRequiredForLP', () => {
-    it('Should calculate the amount of OHM required for pairing with the BTRFLY balance', async () => {
+  describe("calculateOHMAmountRequiredForLP", () => {
+    it("Should calculate the amount of OHM required for pairing with the BTRFLY balance", async () => {
       const ohm: BigNumber =
         await thecosomata._calculateOHMAmountRequiredForLP();
 
@@ -198,8 +198,8 @@ describe('Thecosomata', function () {
     });
   });
 
-  describe('withdrawSOHMFromTreasury', () => {
-    it('Should withdraw sOHM from the Redacted treasury', async () => {
+  describe("withdrawSOHMFromTreasury", () => {
+    it("Should withdraw sOHM from the Redacted treasury", async () => {
       // Check sOHM balance of Redacted treasury before withdraw
       const redactedBalanceBeforeWithdrawal: number = Number(
         (await sOhm.balanceOf(redactedTreasury.address)).toString()
@@ -237,8 +237,8 @@ describe('Thecosomata', function () {
     });
   });
 
-  describe('incurOlympusDebt', () => {
-    it('Should use sOHM balance as collateral to borrow OHM', async () => {
+  describe("incurOlympusDebt", () => {
+    it("Should use sOHM balance as collateral to borrow OHM", async () => {
       const sOhmBalanceBeforeBorrow: number = Number(
         await (await sOhm.balanceOf(thecosomata.address)).toString()
       );
@@ -268,8 +268,8 @@ describe('Thecosomata', function () {
     });
   });
 
-  describe('addOHMBTRFLYLiquiditySushiSwap', () => {
-    it('Should add OHM-BTRFLY to the LP and transfer the LP tokens', async () => {
+  describe("addOHMBTRFLYLiquiditySushiSwap", () => {
+    it("Should add OHM-BTRFLY to the LP and transfer the LP tokens", async () => {
       const addLiquidity = await (
         await thecosomata._addOHMBTRFLYLiquiditySushiSwap()
       ).wait();

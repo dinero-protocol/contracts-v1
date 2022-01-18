@@ -46,13 +46,13 @@ interface ISushiFactory {
 contract Thecosomata {
     using SafeMath for uint256;
 
-    IERC20 public immutable BTRFLY;
+    address public immutable BTRFLY;
     address public immutable sushiFactory;
     address public immutable OHM;
-    IsOHM public immutable sOHM;
-    IOlympusTreasury public immutable OlympusTreasury;
-    IRedactedTreasury public immutable RedactedTreasury;
-    ISushiRouter public immutable SushiRouter;
+    address public immutable sOHM;
+    address public immutable OlympusTreasury;
+    address public immutable RedactedTreasury;
+    address public immutable SushiRouter;
     uint256 public debtFee; // in ten-thousandths ( 5000 = 0.5% )
 
     event AddedLiquidity(
@@ -73,7 +73,7 @@ contract Thecosomata {
         uint256 _debtFee
     ) {
         require(_BTRFLY != address(0));
-        BTRFLY = IERC20(_BTRFLY);
+        BTRFLY = _BTRFLY;
 
         require(_sushiFactory != address(0));
         sushiFactory = _sushiFactory;
@@ -82,16 +82,16 @@ contract Thecosomata {
         OHM = _OHM;
 
         require(_sOHM != address(0));
-        sOHM = IsOHM(_sOHM);
+        sOHM = _sOHM;
 
         require(_OlympusTreasury != address(0));
-        OlympusTreasury = IOlympusTreasury(_OlympusTreasury);
+        OlympusTreasury = _OlympusTreasury;
 
         require(_RedactedTreasury != address(0));
-        RedactedTreasury = IRedactedTreasury(_RedactedTreasury);
+        RedactedTreasury = _RedactedTreasury;
 
         require(_SushiRouter != address(0));
-        SushiRouter = ISushiRouter(_SushiRouter);
+        SushiRouter = _SushiRouter;
 
         IERC20(_OHM).approve(_SushiRouter, 2**256 - 1);
         IERC20(_BTRFLY).approve(_SushiRouter, 2**256 - 1);
@@ -110,7 +110,7 @@ contract Thecosomata {
         view
         returns (bool upkeepNeeded, bytes memory performData)
     {
-        if (BTRFLY.balanceOf(address(this)) > 0) {
+        if (IERC20(BTRFLY).balanceOf(address(this)) > 0) {
             return (true, bytes(""));
         }
     }
@@ -133,12 +133,12 @@ contract Thecosomata {
     function calculateOHMAmountRequiredForLP() internal view returns (uint256) {
         // Fetch reserves of both OHM and BTRFLY from Sushi LP
         (uint256 OHMReserves, uint256 BTRFLYReserves) = UniswapV2Library
-            .getReserves(sushiFactory, OHM, address(BTRFLY));
+            .getReserves(sushiFactory, OHM, BTRFLY);
 
         // Get optimal amount of OHM required for pairing with BTRFLY balance when adding liquidity
         return (
             UniswapV2Library.quote(
-                BTRFLY.balanceOf(address(this)), // Desired amount of BTRFLY to deposit as liquidity
+                IERC20(BTRFLY).balanceOf(address(this)), // Desired amount of BTRFLY to deposit as liquidity
                 BTRFLYReserves,
                 OHMReserves
             )
@@ -151,10 +151,12 @@ contract Thecosomata {
      */
     function getRemainingDebtCapacity() internal view returns (uint256) {
         // Get the amount of OHM borrowed
-        uint256 debtBalance = sOHM.debtBalances(address(this));
+        uint256 debtBalance = IsOHM(sOHM).debtBalances(address(this));
 
         // Get the maximum amount of OHM we can borrow
-        uint256 debtLimit = OlympusTreasury.debtLimit(address(this));
+        uint256 debtLimit = IOlympusTreasury(OlympusTreasury).debtLimit(
+            address(this)
+        );
 
         return debtLimit.sub(debtBalance);
     }
@@ -164,25 +166,25 @@ contract Thecosomata {
         @param  amount uint256 The amount of sOHM to withdraw
      */
     function withdrawSOHMFromTreasury(uint256 amount) internal {
-        RedactedTreasury.manage(address(sOHM), amount);
+        IRedactedTreasury(RedactedTreasury).manage(sOHM, amount);
     }
 
     /**
         @notice Borrow OHM from Olympus treasury using uncollateralized sOHM
      */
     function incurOlympusDebt(uint256 amount) internal {
-        OlympusTreasury.incurDebt(amount, OHM);
+        IOlympusTreasury(OlympusTreasury).incurDebt(amount, OHM);
     }
 
     /**
         @notice Add OHM and BTRFLY as liquidity to Sushi LP
      */
     function addOHMBTRFLYLiquiditySushiSwap() internal {
-        uint256 btrflyBalance = BTRFLY.balanceOf(address(this));
+        uint256 btrflyBalance = IERC20(BTRFLY).balanceOf(address(this));
         uint256 ohmBalance = IERC20(OHM).balanceOf(address(this));
 
-        SushiRouter.addLiquidity(
-            address(BTRFLY),
+        ISushiRouter(SushiRouter).addLiquidity(
+            BTRFLY,
             OHM,
             btrflyBalance,
             ohmBalance,
@@ -193,7 +195,7 @@ contract Thecosomata {
         );
 
         IERC20 lpToken = IERC20(
-            ISushiFactory(sushiFactory).getPair(OHM, address(BTRFLY))
+            ISushiFactory(sushiFactory).getPair(OHM, BTRFLY)
         );
 
         uint256 olympusFee;
@@ -205,14 +207,14 @@ contract Thecosomata {
                 1000000
             );
 
-            lpToken.transfer(address(OlympusTreasury), olympusFee);
+            lpToken.transfer(OlympusTreasury, olympusFee);
         }
 
         redactedDeposit = lpToken.balanceOf(address(this));
 
         // Transfer LP token balance to Redacted treasury
         lpToken.transfer(
-            address(RedactedTreasury),
+            RedactedTreasury,
             lpToken.balanceOf(address(this))
         );
 
