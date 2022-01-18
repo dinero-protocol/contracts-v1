@@ -21,4 +21,10 @@ module.exports = {
       { ignores: ["modules"] },
     ],
   },
+  settings: {
+    node: {
+      resolvePaths: ["node_modules/@types"],
+      tryExtensions: [".ts", ".d.ts"],
+    },
+  },
 };
