@@ -183,7 +183,7 @@ contract Thecosomata {
         uint256 btrflyBalance = IERC20(BTRFLY).balanceOf(address(this));
         uint256 ohmBalance = IERC20(OHM).balanceOf(address(this));
 
-        ISushiRouter(SushiRouter).addLiquidity(
+        (, , uint256 slpMinted) = ISushiRouter(SushiRouter).addLiquidity(
             BTRFLY,
             OHM,
             btrflyBalance,
@@ -194,7 +194,7 @@ contract Thecosomata {
             block.timestamp + 5 minutes
         );
 
-        IERC20 lpToken = IERC20(
+        IERC20 slpContract = IERC20(
             ISushiFactory(sushiFactory).getPair(OHM, BTRFLY)
         );
 
@@ -203,20 +203,15 @@ contract Thecosomata {
 
         if (debtFee > 0) {
             // Send Olympus fee in the form of LP tokens
-            olympusFee = lpToken.balanceOf(address(this)).mul(debtFee).div(
-                1000000
-            );
+            olympusFee = slpMinted.mul(debtFee).div(1000000);
 
-            lpToken.transfer(OlympusTreasury, olympusFee);
+            slpContract.transfer(OlympusTreasury, olympusFee);
         }
 
-        redactedDeposit = lpToken.balanceOf(address(this));
+        redactedDeposit = slpMinted.sub(olympusFee);
 
         // Transfer LP token balance to Redacted treasury
-        lpToken.transfer(
-            RedactedTreasury,
-            lpToken.balanceOf(address(this))
-        );
+        slpContract.transfer(RedactedTreasury, redactedDeposit);
 
         emit AddedLiquidity(
             btrflyBalance,

@@ -273,18 +273,23 @@ describe("Thecosomata", function () {
       const addLiquidity = await (
         await thecosomata._addOHMBTRFLYLiquiditySushiSwap()
       ).wait();
-      const addLiquidityEventArgs =
+      const addLiquidityEventArgs: any =
         addLiquidity.events &&
         addLiquidity.events[addLiquidity.events.length - 1].args;
-      const olympusFee: BigNumber =
-        addLiquidityEventArgs && addLiquidityEventArgs.olympusFee;
-      const redactedDeposit: BigNumber =
-        addLiquidityEventArgs && addLiquidityEventArgs.redactedDeposit;
+      const olympusFee: number =
+        addLiquidityEventArgs &&
+        Number(addLiquidityEventArgs.olympusFee.toString());
+      const redactedDeposit: number =
+        addLiquidityEventArgs &&
+        Number(addLiquidityEventArgs.redactedDeposit.toString());
 
       // TO DO: Confirm that Olympus only receives what it's supposed to
 
-      expect(Number(olympusFee.toString())).to.be.greaterThan(0);
-      expect(Number(redactedDeposit.toString())).to.be.greaterThan(0);
+      expect(olympusFee).to.be.greaterThan(0);
+      expect(redactedDeposit).to.be.greaterThan(0);
+      expect(
+        Math.floor(((olympusFee + redactedDeposit) * 5000) / 1000000)
+      ).to.equal(olympusFee);
     });
   });
 
