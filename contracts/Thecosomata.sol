@@ -148,9 +148,17 @@ contract Thecosomata is Ownable {
         @param  performdata    bytes Data which was passed back from the checkData simulation
      */
     function performUpkeep(bytes calldata performdata) external {
+        bool shouldBorrow = abi.decode(performdata, (bool));
         uint256 ohm = calculateOHMAmountRequiredForLP();
+
         withdrawSOHMFromTreasury(ohm);
-        incurOlympusDebt(ohm);
+
+        if (shouldBorrow) {
+            incurOlympusDebt(ohm);
+        } else {
+            unstakeSOHM(ohm);
+        }
+
         addOHMBTRFLYLiquiditySushiSwap();
     }
 
@@ -252,10 +260,10 @@ contract Thecosomata is Ownable {
     /**
         @notice Unstake sOHM balance
      */
-    function unstakeSOHM() internal {
+    function unstakeSOHM(uint256 amount) internal {
         IOlympusStaking(OlympusStaking).unstake(
             address(this),
-            IERC20(sOHM).balanceOf(address(this)),
+            amount,
             true,
             true
         );

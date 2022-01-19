@@ -44,7 +44,7 @@ contract ThecosomataInternal is Thecosomata {
         return addOHMBTRFLYLiquiditySushiSwap();
     }
 
-    function _unstakeSOHM() public {
-        return unstakeSOHM();
+    function _unstakeSOHM(uint256 amount) public {
+        return unstakeSOHM(amount);
     }
 }

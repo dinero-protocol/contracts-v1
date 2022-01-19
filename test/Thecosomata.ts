@@ -291,17 +291,17 @@ describe("Thecosomata", function () {
       const olympusFee: number =
         addLiquidityEventArgs &&
         Number(addLiquidityEventArgs.olympusFee.toString());
-      const redactedDeposit: number =
+      const slpMinted: number =
         addLiquidityEventArgs &&
-        Number(addLiquidityEventArgs.redactedDeposit.toString());
+        Number(addLiquidityEventArgs.slpMinted.toString());
 
       // TO DO: Confirm that Olympus only receives what it's supposed to
 
       expect(olympusFee).to.be.greaterThan(0);
-      expect(redactedDeposit).to.be.greaterThan(0);
-      expect(
-        Math.floor(((olympusFee + redactedDeposit) * 5000) / 1000000)
-      ).to.equal(olympusFee);
+      expect(slpMinted).to.be.greaterThan(0);
+      expect(Math.floor(((olympusFee + slpMinted) * 5000) / 1000000)).to.equal(
+        olympusFee
+      );
     });
   });
 
@@ -329,18 +329,27 @@ describe("Thecosomata", function () {
     });
   });
 
-  // describe('performUpkeep', () => {
-  //   it('Should fully perform up-keep if BTRFLY balance is above 0', async () => {
-  //     // Test the up-keep
-  //     await thecosomata.performUpkeep(new Uint8Array());
+  describe("performUpkeep", () => {
+    it("Should add liquidity using borrowed OHM if performUpkeep(true)", async () => {
+      await btrfly.transfer(
+        thecosomata.address,
+        (1e9).toString()
+      );
+      
+      await thecosomata.performUpkeep(
+        ethers.utils.defaultAbiCoder.encode(["bool"], [true])
+      );
+    });
 
-  //     // Check LP-token balance
-  //     const lpBalance = await swapRouter.lpBalance(
-  //       redactedTreasury.address,
-  //       ohm.address,
-  //       btrfly.address
-  //     );
-  //     expect(lpBalance.gt(0)).to.equal(true);
-  //   });
-  // });
+    it("Should add liquidity using unstaked sOHM if performUpkeep(false)", async () => {
+      await btrfly.transfer(
+        thecosomata.address,
+        (1e9).toString()
+      );
+      
+      await thecosomata.performUpkeep(
+        ethers.utils.defaultAbiCoder.encode(["bool"], [false])
+      );
+    });
+  });
 });
