@@ -28,11 +28,10 @@ contract ThecosomataInternal is Thecosomata {
         )
     {}
 
-    function _calculateAmountRequiredForLP(uint256 tokenAAmount, bool tokenAIsBTRFLY)
-        public
-        view
-        returns (uint256)
-    {
+    function _calculateAmountRequiredForLP(
+        uint256 tokenAAmount,
+        bool tokenAIsBTRFLY
+    ) public view returns (uint256) {
         return calculateAmountRequiredForLP(tokenAAmount, tokenAIsBTRFLY);
     }
 
@@ -44,11 +43,22 @@ contract ThecosomataInternal is Thecosomata {
         return incurOlympusDebt(amount);
     }
 
-    function _addOHMBTRFLYLiquiditySushiSwap(uint256 ohmAmount, uint256 btrflyAmount) public {
+    function _addOHMBTRFLYLiquiditySushiSwap(
+        uint256 ohmAmount,
+        uint256 btrflyAmount
+    ) public {
         return addOHMBTRFLYLiquiditySushiSwap(ohmAmount, btrflyAmount);
     }
 
     function _unstakeSOHM(uint256 amount) public {
         return unstakeSOHM(amount);
+    }
+
+    function _getRemainingDebtCapacity() public view returns (uint256) {
+        return getRemainingDebtCapacity();
+    }
+
+    function _borrowAndAddLiquidity() public {
+        return borrowAndAddLiquidity();
     }
 }

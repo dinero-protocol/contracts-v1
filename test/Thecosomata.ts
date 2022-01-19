@@ -33,7 +33,7 @@ describe("Thecosomata", function () {
   const redactedTreasurySOhmFloor = 5e9;
   const redactedTreasurySOhmDeposit = 100e18;
   const adminBtrflyReceivedForSOhmDeposit: number = 10e9;
-  const olympusTreasuryDebtLimit: number = redactedTreasurySOhmDeposit / 2;
+  const olympusTreasuryDebtLimit: number = redactedTreasurySOhmDeposit / 4;
   const swapRouterBtrflyLiquidity: number = 1e9;
   const swapRouterOhmLiquidity: number = 5e18;
   const debtFee: number = 5000;
@@ -289,10 +289,7 @@ describe("Thecosomata", function () {
       const btrflyBalance = await btrfly.balanceOf(thecosomata.address);
       const addLiquidity = await (
         await thecosomata._addOHMBTRFLYLiquiditySushiSwap(
-          await thecosomata._calculateAmountRequiredForLP(
-            btrflyBalance,
-            true
-          ),
+          await thecosomata._calculateAmountRequiredForLP(btrflyBalance, true),
           btrflyBalance
         )
       ).wait();
@@ -355,6 +352,32 @@ describe("Thecosomata", function () {
       await thecosomata.performUpkeep(
         ethers.utils.defaultAbiCoder.encode(["bool"], [false])
       );
+    });
+  });
+
+  describe("borrowAndAddLiquidity", () => {
+    it("Should only borrow up to the debt capacity and burn leftover BTRFLY", async () => {
+      // There should be about 15 OHM left worth of debt
+      // We add 5 OHM per 1 BTRFLY worth of liquidity
+      // Transferring 4 BTRFLY should result in debt capacity being reached
+      await btrfly.transfer(thecosomata.address, (4e9).toString());
+
+      const debtCapacity = await thecosomata._getRemainingDebtCapacity();
+      const { events } = await (
+        await thecosomata._borrowAndAddLiquidity()
+      ).wait();
+      const borrowAndAddLiquidityEventArgs: any =
+        events && events[events.length - 1].args;
+      const { debtCapacityBefore, debtCapacityAfter, btrflyBurned } =
+        borrowAndAddLiquidityEventArgs;
+        const ohmBalance = await ohm.balanceOf(thecosomata.address);
+      const btrflyBalance = await btrfly.balanceOf(thecosomata.address);
+
+      expect(debtCapacityBefore).to.equal(debtCapacity);
+      expect(Number(debtCapacityAfter.toString())).to.equal(0);
+      expect(Number(btrflyBurned.toString()) / 1e9).to.equal(1);
+      expect(Number(ohmBalance.toString())).to.equal(0);
+      expect(Number(btrflyBalance.toString())).to.equal(0);
     });
   });
 });

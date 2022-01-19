@@ -77,6 +77,11 @@ contract Thecosomata is Ownable {
         uint256 slpMinted
     );
     event SetDebtFee(uint256 updatedDebtFee);
+    event BorrowAndAddLiquidity(
+        uint256 debtCapacityBefore,
+        uint256 debtCapacityAfter,
+        uint256 btrflyBurned
+    );
 
     constructor(
         address _BTRFLY,
@@ -123,9 +128,8 @@ contract Thecosomata is Ownable {
     /**
         @notice Set debt fee
         @param  _debtFee uint256 New debt fee
-        @return          uint256 Debt fee post-set
      */
-    function setDebtFee(uint256 _debtFee) external onlyOwner returns (uint256) {
+    function setDebtFee(uint256 _debtFee) external onlyOwner {
         debtFee = _debtFee;
 
         emit SetDebtFee(debtFee);
@@ -153,16 +157,16 @@ contract Thecosomata is Ownable {
      */
     function performUpkeep(bytes calldata performdata) external {
         bool shouldBorrow = abi.decode(performdata, (bool));
-        uint256 ohm = calculateAmountRequiredForLP(
-            IBTRFLY(BTRFLY).balanceOf(address(this)),
-            true
-        );
-
-        withdrawSOHMFromTreasury(ohm);
 
         if (shouldBorrow) {
             borrowAndAddLiquidity();
         } else {
+            uint256 ohm = calculateAmountRequiredForLP(
+                IBTRFLY(BTRFLY).balanceOf(address(this)),
+                true
+            );
+
+            withdrawSOHMFromTreasury(ohm);
             unstakeSOHM(ohm);
 
             addOHMBTRFLYLiquiditySushiSwap(
@@ -174,8 +178,8 @@ contract Thecosomata is Ownable {
 
     /**
         @notice Calculates the optimal amount of token B needed for pairing with token A when adding liquidity
-        @param tokenAAmount uint256 Fixed amount of tokens that we will be adding as liquidity token A
-        @param tokenAIsBTRFLY     bool    Whether token A is BTRFLY
+        @param tokenAAmount   uint256 Fixed amount of tokens that we will be adding as liquidity token A
+        @param tokenAIsBTRFLY bool    Whether token A is BTRFLY
         @return uint256
      */
     function calculateAmountRequiredForLP(
@@ -287,6 +291,9 @@ contract Thecosomata is Ownable {
         );
     }
 
+    /**
+        @notice Borrow from the Olympus Treasury and add liquidity
+     */
     function borrowAndAddLiquidity() internal {
         uint256 btrfly = IBTRFLY(BTRFLY).balanceOf(address(this));
 
@@ -313,5 +320,11 @@ contract Thecosomata is Ownable {
         if (unusedBTRFLY > 0) {
             IBTRFLY(BTRFLY).burn(unusedBTRFLY);
         }
+
+        emit BorrowAndAddLiquidity(
+            remainingDebtCapacity,
+            remainingDebtCapacity.sub(ohmLiquidity),
+            unusedBTRFLY
+        );
     }
 }
