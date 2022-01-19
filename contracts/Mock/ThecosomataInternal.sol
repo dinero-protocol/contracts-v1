@@ -58,7 +58,11 @@ contract ThecosomataInternal is Thecosomata {
         return getRemainingDebtCapacity();
     }
 
-    function _borrowAndAddLiquidity() public {
-        return borrowAndAddLiquidity();
+    function _getRemainingUnstakeableSOHM() public view returns (uint256) {
+        return getRemainingUnstakeableSOHM();
+    }
+
+    function _addLiquidity(bool shouldBorrow) public {
+        return addLiquidity(shouldBorrow);
     }
 }

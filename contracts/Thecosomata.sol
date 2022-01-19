@@ -77,9 +77,9 @@ contract Thecosomata is Ownable {
         uint256 slpMinted
     );
     event SetDebtFee(uint256 updatedDebtFee);
-    event BorrowAndAddLiquidity(
-        uint256 debtCapacityBefore,
-        uint256 debtCapacityAfter,
+    event AddLiquidity(
+        uint256 capacityBefore, // capacity = debt or unstaking capacity
+        uint256 capacityAfter,
         uint256 btrflyBurned
     );
 
@@ -158,22 +158,7 @@ contract Thecosomata is Ownable {
     function performUpkeep(bytes calldata performdata) external {
         bool shouldBorrow = abi.decode(performdata, (bool));
 
-        if (shouldBorrow) {
-            borrowAndAddLiquidity();
-        } else {
-            uint256 ohm = calculateAmountRequiredForLP(
-                IBTRFLY(BTRFLY).balanceOf(address(this)),
-                true
-            );
-
-            withdrawSOHMFromTreasury(ohm);
-            unstakeSOHM(ohm);
-
-            addOHMBTRFLYLiquiditySushiSwap(
-                ohm,
-                IBTRFLY(BTRFLY).balanceOf(address(this))
-            );
-        }
+        addLiquidity(shouldBorrow);
     }
 
     /**
@@ -215,6 +200,17 @@ contract Thecosomata is Ownable {
         );
 
         return debtLimit.sub(debtBalance);
+    }
+
+    function getRemainingUnstakeableSOHM() internal view returns (uint256) {
+        uint256 totalSOHM = IsOHM(sOHM).balanceOf(RedactedTreasury).add(
+            IsOHM(sOHM).balanceOf(address(this))
+        );
+        uint256 sOHMReservedForOlympus = IOlympusTreasury(OlympusTreasury)
+            .debtLimit(address(this))
+            .mul(2);
+
+        return totalSOHM.sub(sOHMReservedForOlympus);
     }
 
     /**
@@ -293,38 +289,42 @@ contract Thecosomata is Ownable {
 
     /**
         @notice Borrow from the Olympus Treasury and add liquidity
+        @param  shouldBorrow bool Whether we should borrow or unstake
      */
-    function borrowAndAddLiquidity() internal {
+    function addLiquidity(bool shouldBorrow) internal {
         uint256 btrfly = IBTRFLY(BTRFLY).balanceOf(address(this));
 
-        // Amount of OHM we will withdraw and use as collateral if we have enough debt capacity
+        // Amount of OHM we will withdraw and use as collateral or unstake if we have enough capacity
         uint256 ohm = calculateAmountRequiredForLP(btrfly, true);
 
-        uint256 remainingDebtCapacity = getRemainingDebtCapacity();
-        uint256 ohmLiquidity = remainingDebtCapacity > ohm
-            ? ohm
-            : remainingDebtCapacity;
+        // The borrow or unstaking capacity
+        uint256 ohmCap = shouldBorrow
+            ? getRemainingDebtCapacity()
+            : getRemainingUnstakeableSOHM();
+        uint256 ohmLiquidity = ohmCap > ohm ? ohm : ohmCap;
 
-        // Use BTRFLY balance if remaining debt capacity is enough, otherwise, calculate BTRFLY amount
-        uint256 btrflyLiquidity = remainingDebtCapacity > ohm
+        // Use BTRFLY balance if remaining capacity is enough, otherwise, calculate BTRFLY amount
+        uint256 btrflyLiquidity = ohmCap > ohm
             ? btrfly
             : calculateAmountRequiredForLP(ohmLiquidity, false);
 
         withdrawSOHMFromTreasury(ohmLiquidity);
-        incurOlympusDebt(ohmLiquidity);
+
+        if (shouldBorrow) {
+            incurOlympusDebt(ohmLiquidity);
+        } else {
+            unstakeSOHM(ohmLiquidity);
+        }
+
         addOHMBTRFLYLiquiditySushiSwap(ohmLiquidity, btrflyLiquidity);
 
-        // Leftover BTRFLY that was not used (i.e. remainingDebtCapacity > ohm)
+        // Leftover BTRFLY that was not used (i.e. ohmCap > ohm)
         uint256 unusedBTRFLY = IBTRFLY(BTRFLY).balanceOf(address(this));
 
         if (unusedBTRFLY > 0) {
             IBTRFLY(BTRFLY).burn(unusedBTRFLY);
         }
 
-        emit BorrowAndAddLiquidity(
-            remainingDebtCapacity,
-            remainingDebtCapacity.sub(ohmLiquidity),
-            unusedBTRFLY
-        );
+        emit AddLiquidity(ohmCap, ohmCap.sub(ohmLiquidity), unusedBTRFLY);
     }
 }

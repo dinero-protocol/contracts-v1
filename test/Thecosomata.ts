@@ -337,6 +337,27 @@ describe("Thecosomata", function () {
     });
   });
 
+  describe("getRemainingUnstakeableSOHM", () => {
+    it("Should return the correct amount of sOHM available to unstake", async () => {
+      const sOHMReservedForOlympus: number = olympusTreasuryDebtLimit * 2;
+      const redactedTreasurySOHMBalance: number = Number(
+        (await sOhm.balanceOf(redactedTreasury.address)).toString()
+      );
+      const thecosomataSOHMBalance: number = Number(
+        (await sOhm.balanceOf(thecosomata.address)).toString()
+      );
+      const availableSOHMToUnstake =
+        redactedTreasurySOHMBalance +
+        thecosomataSOHMBalance -
+        sOHMReservedForOlympus;
+      const unstakeableSOHM: number = Number(
+        (await thecosomata._getRemainingUnstakeableSOHM()).toString()
+      );
+
+      expect(availableSOHMToUnstake).to.equal(unstakeableSOHM);
+    });
+  });
+
   describe("performUpkeep", () => {
     it("Should add liquidity using borrowed OHM if performUpkeep(true)", async () => {
       await btrfly.transfer(thecosomata.address, (1e9).toString());
@@ -355,7 +376,7 @@ describe("Thecosomata", function () {
     });
   });
 
-  describe("borrowAndAddLiquidity", () => {
+  describe("addLiquidity - borrow", () => {
     it("Should only borrow up to the debt capacity and burn leftover BTRFLY", async () => {
       // There should be about 15 OHM left worth of debt
       // We add 5 OHM per 1 BTRFLY worth of liquidity
@@ -363,21 +384,38 @@ describe("Thecosomata", function () {
       await btrfly.transfer(thecosomata.address, (4e9).toString());
 
       const debtCapacity = await thecosomata._getRemainingDebtCapacity();
-      const { events } = await (
-        await thecosomata._borrowAndAddLiquidity()
-      ).wait();
+      const { events } = await (await thecosomata._addLiquidity(true)).wait();
       const borrowAndAddLiquidityEventArgs: any =
         events && events[events.length - 1].args;
-      const { debtCapacityBefore, debtCapacityAfter, btrflyBurned } =
+      const { capacityBefore, capacityAfter, btrflyBurned } =
         borrowAndAddLiquidityEventArgs;
-        const ohmBalance = await ohm.balanceOf(thecosomata.address);
+      const ohmBalance = await ohm.balanceOf(thecosomata.address);
       const btrflyBalance = await btrfly.balanceOf(thecosomata.address);
 
-      expect(debtCapacityBefore).to.equal(debtCapacity);
-      expect(Number(debtCapacityAfter.toString())).to.equal(0);
+      expect(capacityBefore).to.equal(debtCapacity);
+      expect(Number(capacityAfter.toString())).to.equal(0);
       expect(Number(btrflyBurned.toString()) / 1e9).to.equal(1);
       expect(Number(ohmBalance.toString())).to.equal(0);
       expect(Number(btrflyBalance.toString())).to.equal(0);
+    });
+  });
+
+  describe("addLiquidity - unstake", () => {
+    it("Should withdraw, unstake, and add liquidity without affecting debt capacity", async () => {
+      await btrfly.transfer(thecosomata.address, 1e9);
+
+      // Check whether debt capacity is affected by unstaking
+      const debtCapacityBefore = await thecosomata._getRemainingDebtCapacity();
+      const { events } = await (await thecosomata._addLiquidity(false)).wait();
+      const debtCapacityAfter = await thecosomata._getRemainingDebtCapacity();
+      const unstakeAndAddLiquidityEventArgs: any =
+        events && events[events.length - 1].args;
+      const { capacityBefore, capacityAfter, btrflyBurned } =
+        unstakeAndAddLiquidityEventArgs;
+
+      expect(debtCapacityBefore).to.equal(debtCapacityAfter);
+      expect(Number(capacityBefore.toString())).to.be.greaterThan(Number(capacityAfter.toString()))
+      expect(Number(btrflyBurned.toString())).to.equal(0);
     });
   });
 });
