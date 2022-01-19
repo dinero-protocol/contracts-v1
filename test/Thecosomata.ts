@@ -11,6 +11,7 @@ import {
   OlympusTreasury,
   SwapRouter,
   REDACTEDTreasury,
+  OlympusStaking,
 } from "../typechain";
 
 describe("Thecosomata", function () {
@@ -23,9 +24,11 @@ describe("Thecosomata", function () {
   let ohmTreasury: OlympusTreasury;
   let swapRouter: SwapRouter;
   let redactedTreasury: REDACTEDTreasury;
+  let ohmStaking: OlympusStaking;
 
   const ohmMintForRouter: number = 10e18;
   const sOhmMintForAdmin: number = 200e18;
+  const ohmMintForStaking: number = 1000e18;
   const redactedTreasuryOhmFloor = 5e9;
   const redactedTreasurySOhmFloor = 5e9;
   const redactedTreasurySOhmDeposit = 100e18;
@@ -58,6 +61,7 @@ describe("Thecosomata", function () {
     ohm = await OHM.deploy();
     sOhm = await SOHM.deploy();
     ohmTreasury = await OHMTreasury.deploy(ohm.address, sOhm.address);
+    ohmStaking = await OlympusStaking.deploy(ohm.address, sOhm.address);
     btrfly = await BTRFLY.deploy();
     swapRouter = await SwapRouter.deploy(sushiV2RouterAddr, sushiV2FactoryAddr);
     redactedTreasury = await REDACTEDTreasury.deploy(
@@ -100,6 +104,11 @@ describe("Thecosomata", function () {
       sOhmMintForAdmin.toString()
     );
     await sOhmMintTx.wait();
+    const ohmStakingMintTx = await ohm.mint(
+      ohmStaking.address,
+      ohmMintForStaking.toString()
+    );
+    await ohmStakingMintTx.wait();
 
     // Unfreeze btrfly
     const unfreezeBtrflyTx = await btrfly.unFreezeToken();
