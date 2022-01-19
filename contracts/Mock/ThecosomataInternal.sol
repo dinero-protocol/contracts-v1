@@ -12,6 +12,7 @@ contract ThecosomataInternal is Thecosomata {
         address _OlympusTreasury,
         address _RedactedTreasury,
         address _SushiRouter,
+        address _OlympusStaking,
         uint256 _debtFee
     )
         Thecosomata(
@@ -22,6 +23,7 @@ contract ThecosomataInternal is Thecosomata {
             _OlympusTreasury,
             _RedactedTreasury,
             _SushiRouter,
+            _OlympusStaking,
             _debtFee
         )
     {}
@@ -40,5 +42,9 @@ contract ThecosomataInternal is Thecosomata {
 
     function _addOHMBTRFLYLiquiditySushiSwap() public {
         return addOHMBTRFLYLiquiditySushiSwap();
+    }
+
+    function _unstakeSOHM() public {
+        return unstakeSOHM();
     }
 }

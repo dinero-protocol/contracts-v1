@@ -44,6 +44,15 @@ interface ISushiFactory {
     function getPair(address tokenA, address tokenB) external returns (address);
 }
 
+interface IOlympusStaking {
+    function unstake(
+        address _to,
+        uint256 _amount,
+        bool _trigger,
+        bool _rebasing
+    ) external returns (uint256);
+}
+
 contract Thecosomata is Ownable {
     using SafeMath for uint256;
 
@@ -54,6 +63,7 @@ contract Thecosomata is Ownable {
     address public immutable OlympusTreasury;
     address public immutable RedactedTreasury;
     address public immutable SushiRouter;
+    address public immutable OlympusStaking;
     uint256 public debtFee; // in ten-thousandths ( 5000 = 0.5% )
 
     event AddedLiquidity(
@@ -72,6 +82,7 @@ contract Thecosomata is Ownable {
         address _OlympusTreasury,
         address _RedactedTreasury,
         address _SushiRouter,
+        address _OlympusStaking,
         uint256 _debtFee
     ) {
         require(_BTRFLY != address(0));
@@ -95,8 +106,12 @@ contract Thecosomata is Ownable {
         require(_SushiRouter != address(0));
         SushiRouter = _SushiRouter;
 
+        require(_OlympusStaking != address(0));
+        OlympusStaking = _OlympusStaking;
+
         IERC20(_OHM).approve(_SushiRouter, 2**256 - 1);
         IERC20(_BTRFLY).approve(_SushiRouter, 2**256 - 1);
+        IERC20(_sOHM).approve(_OlympusStaking, 2**256 - 1);
 
         debtFee = _debtFee;
     }
@@ -231,6 +246,18 @@ contract Thecosomata is Ownable {
             ohmBalance,
             olympusFee,
             redactedDeposit
+        );
+    }
+
+    /**
+        @notice Unstake sOHM balance
+     */
+    function unstakeSOHM() internal {
+        IOlympusStaking(OlympusStaking).unstake(
+            address(this),
+            IERC20(sOHM).balanceOf(address(this)),
+            true,
+            true
         );
     }
 }
