@@ -28,7 +28,7 @@ describe("Thecosomata", function () {
 
   const ohmMintForRouter: number = 10e18;
   const sOhmMintForAdmin: number = 200e18;
-  const ohmMintForStaking: number = 1000e18;
+  const ohmMintForStaking: number = 300e18;
   const redactedTreasuryOhmFloor = 5e9;
   const redactedTreasurySOhmFloor = 5e9;
   const redactedTreasurySOhmDeposit = 100e18;
@@ -49,6 +49,7 @@ describe("Thecosomata", function () {
     const SOHM = await ethers.getContractFactory("SOlympus");
     const BTRFLY = await ethers.getContractFactory("BTRFLY");
     const OHMTreasury = await ethers.getContractFactory("OlympusTreasury");
+    const OlympusStaking = await ethers.getContractFactory("OlympusStaking");
     const SwapRouter = await ethers.getContractFactory("SwapRouter");
     const REDACTEDTreasury = await ethers.getContractFactory(
       "REDACTEDTreasury"
@@ -84,6 +85,7 @@ describe("Thecosomata", function () {
       ohmTreasury.address,
       redactedTreasury.address,
       sushiV2RouterAddr,
+      ohmStaking.address,
       debtFee
     );
 
