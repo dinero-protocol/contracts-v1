@@ -286,8 +286,15 @@ describe("Thecosomata", function () {
 
   describe("addOHMBTRFLYLiquiditySushiSwap", () => {
     it("Should add OHM-BTRFLY to the LP and transfer the LP tokens", async () => {
+      const btrflyBalance = await btrfly.balanceOf(thecosomata.address);
       const addLiquidity = await (
-        await thecosomata._addOHMBTRFLYLiquiditySushiSwap()
+        await thecosomata._addOHMBTRFLYLiquiditySushiSwap(
+          await thecosomata._calculateAmountRequiredForLP(
+            btrflyBalance,
+            true
+          ),
+          btrflyBalance
+        )
       ).wait();
       const addLiquidityEventArgs: any =
         addLiquidity.events &&

@@ -7,6 +7,10 @@ import {IERC20} from "./interface/IERC20.sol";
 import {SafeMath} from "./library/SafeMath.sol";
 import {Ownable} from "./base/Ownable.sol";
 
+interface IBTRFLY is IERC20 {
+    function burn(uint256 amount) external;
+}
+
 interface IsOHM is IERC20 {
     function debtBalances(address _address) external view returns (uint256);
 }
@@ -67,8 +71,8 @@ contract Thecosomata is Ownable {
     uint256 public debtFee; // in ten-thousandths ( 5000 = 0.5% )
 
     event AddedLiquidity(
-        uint256 btrfly,
         uint256 ohm,
+        uint256 btrfly,
         uint256 olympusFee,
         uint256 slpMinted
     );
@@ -110,7 +114,7 @@ contract Thecosomata is Ownable {
         OlympusStaking = _OlympusStaking;
 
         IERC20(_OHM).approve(_SushiRouter, 2**256 - 1);
-        IERC20(_BTRFLY).approve(_SushiRouter, 2**256 - 1);
+        IBTRFLY(_BTRFLY).approve(_SushiRouter, 2**256 - 1);
         IERC20(_sOHM).approve(_OlympusStaking, 2**256 - 1);
 
         debtFee = _debtFee;
@@ -138,7 +142,7 @@ contract Thecosomata is Ownable {
         view
         returns (bool upkeepNeeded, bytes memory performData)
     {
-        if (IERC20(BTRFLY).balanceOf(address(this)) > 0) {
+        if (IBTRFLY(BTRFLY).balanceOf(address(this)) > 0) {
             return (true, bytes(""));
         }
     }
@@ -150,19 +154,22 @@ contract Thecosomata is Ownable {
     function performUpkeep(bytes calldata performdata) external {
         bool shouldBorrow = abi.decode(performdata, (bool));
         uint256 ohm = calculateAmountRequiredForLP(
-            IERC20(BTRFLY).balanceOf(address(this)),
+            IBTRFLY(BTRFLY).balanceOf(address(this)),
             true
         );
 
         withdrawSOHMFromTreasury(ohm);
 
         if (shouldBorrow) {
-            incurOlympusDebt(ohm);
+            borrowAndAddLiquidity();
         } else {
             unstakeSOHM(ohm);
-        }
 
-        addOHMBTRFLYLiquiditySushiSwap();
+            addOHMBTRFLYLiquiditySushiSwap(
+                ohm,
+                IBTRFLY(BTRFLY).balanceOf(address(this))
+            );
+        }
     }
 
     /**
@@ -171,11 +178,10 @@ contract Thecosomata is Ownable {
         @param tokenAIsBTRFLY     bool    Whether token A is BTRFLY
         @return uint256
      */
-    function calculateAmountRequiredForLP(uint256 tokenAAmount, bool tokenAIsBTRFLY)
-        internal
-        view
-        returns (uint256)
-    {
+    function calculateAmountRequiredForLP(
+        uint256 tokenAAmount,
+        bool tokenAIsBTRFLY
+    ) internal view returns (uint256) {
         // Fetch reserves of both OHM and BTRFLY from Sushi LP
         (uint256 OHMReserves, uint256 BTRFLYReserves) = UniswapV2Library
             .getReserves(sushiFactory, OHM, BTRFLY);
@@ -224,18 +230,20 @@ contract Thecosomata is Ownable {
 
     /**
         @notice Add OHM and BTRFLY as liquidity to Sushi LP
+        @param ohmAmount    uint256 OHM to add as liquidity
+        @param btrflyAmount uint256 BTRFLY to add as liquidity
      */
-    function addOHMBTRFLYLiquiditySushiSwap() internal {
-        uint256 btrflyBalance = IERC20(BTRFLY).balanceOf(address(this));
-        uint256 ohmBalance = IERC20(OHM).balanceOf(address(this));
-
+    function addOHMBTRFLYLiquiditySushiSwap(
+        uint256 ohmAmount,
+        uint256 btrflyAmount
+    ) internal {
         (, , uint256 slpMinted) = ISushiRouter(SushiRouter).addLiquidity(
             BTRFLY,
             OHM,
-            btrflyBalance,
-            ohmBalance,
-            btrflyBalance,
-            ohmBalance,
+            btrflyAmount,
+            ohmAmount,
+            btrflyAmount,
+            ohmAmount,
             address(this), // Mint LP tokens directly to Redacted treasury
             block.timestamp + 5 minutes
         );
@@ -260,8 +268,8 @@ contract Thecosomata is Ownable {
         slpContract.transfer(RedactedTreasury, redactedDeposit);
 
         emit AddedLiquidity(
-            btrflyBalance,
-            ohmBalance,
+            ohmAmount,
+            btrflyAmount,
             olympusFee,
             redactedDeposit
         );
@@ -277,5 +285,33 @@ contract Thecosomata is Ownable {
             true,
             true
         );
+    }
+
+    function borrowAndAddLiquidity() internal {
+        uint256 btrfly = IBTRFLY(BTRFLY).balanceOf(address(this));
+
+        // Amount of OHM we will withdraw and use as collateral if we have enough debt capacity
+        uint256 ohm = calculateAmountRequiredForLP(btrfly, true);
+
+        uint256 remainingDebtCapacity = getRemainingDebtCapacity();
+        uint256 ohmLiquidity = remainingDebtCapacity > ohm
+            ? ohm
+            : remainingDebtCapacity;
+
+        // Use BTRFLY balance if remaining debt capacity is enough, otherwise, calculate BTRFLY amount
+        uint256 btrflyLiquidity = remainingDebtCapacity > ohm
+            ? btrfly
+            : calculateAmountRequiredForLP(ohmLiquidity, false);
+
+        withdrawSOHMFromTreasury(ohmLiquidity);
+        incurOlympusDebt(ohmLiquidity);
+        addOHMBTRFLYLiquiditySushiSwap(ohmLiquidity, btrflyLiquidity);
+
+        // Leftover BTRFLY that was not used (i.e. remainingDebtCapacity > ohm)
+        uint256 unusedBTRFLY = IBTRFLY(BTRFLY).balanceOf(address(this));
+
+        if (unusedBTRFLY > 0) {
+            IBTRFLY(BTRFLY).burn(unusedBTRFLY);
+        }
     }
 }

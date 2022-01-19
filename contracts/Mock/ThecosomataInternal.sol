@@ -44,8 +44,8 @@ contract ThecosomataInternal is Thecosomata {
         return incurOlympusDebt(amount);
     }
 
-    function _addOHMBTRFLYLiquiditySushiSwap() public {
-        return addOHMBTRFLYLiquiditySushiSwap();
+    function _addOHMBTRFLYLiquiditySushiSwap(uint256 ohmAmount, uint256 btrflyAmount) public {
+        return addOHMBTRFLYLiquiditySushiSwap(ohmAmount, btrflyAmount);
     }
 
     function _unstakeSOHM(uint256 amount) public {
