@@ -149,7 +149,10 @@ contract Thecosomata is Ownable {
      */
     function performUpkeep(bytes calldata performdata) external {
         bool shouldBorrow = abi.decode(performdata, (bool));
-        uint256 ohm = calculateOHMAmountRequiredForLP();
+        uint256 ohm = calculateAmountRequiredForLP(
+            IERC20(BTRFLY).balanceOf(address(this)),
+            true
+        );
 
         withdrawSOHMFromTreasury(ohm);
 
@@ -163,20 +166,27 @@ contract Thecosomata is Ownable {
     }
 
     /**
-        @notice Calculates the optimal amount of OHM for pairing with BTRFLY balance when adding liquidity
-        @return uint256 Optimal OHM amount for LP
+        @notice Calculates the optimal amount of token B needed for pairing with token A when adding liquidity
+        @param tokenAAmount uint256 Fixed amount of tokens that we will be adding as liquidity token A
+        @param tokenAIsBTRFLY     bool    Whether token A is BTRFLY
+        @return uint256
      */
-    function calculateOHMAmountRequiredForLP() internal view returns (uint256) {
+    function calculateAmountRequiredForLP(uint256 tokenAAmount, bool tokenAIsBTRFLY)
+        internal
+        view
+        returns (uint256)
+    {
         // Fetch reserves of both OHM and BTRFLY from Sushi LP
         (uint256 OHMReserves, uint256 BTRFLYReserves) = UniswapV2Library
             .getReserves(sushiFactory, OHM, BTRFLY);
+        uint256 tokenAReserves = tokenAIsBTRFLY ? BTRFLYReserves : OHMReserves;
+        uint256 tokenBReserves = tokenAIsBTRFLY ? OHMReserves : BTRFLYReserves;
 
-        // Get optimal amount of OHM required for pairing with BTRFLY balance when adding liquidity
         return (
             UniswapV2Library.quote(
-                IERC20(BTRFLY).balanceOf(address(this)), // Desired amount of BTRFLY to deposit as liquidity
-                BTRFLYReserves,
-                OHMReserves
+                tokenAAmount, // Desired amount of token A to deposit as liquidity
+                tokenAReserves,
+                tokenBReserves
             )
         );
     }

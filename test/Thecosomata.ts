@@ -201,10 +201,12 @@ describe("Thecosomata", function () {
     });
   });
 
-  describe("calculateOHMAmountRequiredForLP", () => {
+  describe("calculateAmountRequiredForLP", () => {
     it("Should calculate the amount of OHM required for pairing with the BTRFLY balance", async () => {
-      const ohm: BigNumber =
-        await thecosomata._calculateOHMAmountRequiredForLP();
+      const ohm: BigNumber = await thecosomata._calculateAmountRequiredForLP(
+        await btrfly.balanceOf(thecosomata.address),
+        true
+      );
 
       expect(ohm.gt(0)).to.equal(true);
     });
@@ -220,8 +222,10 @@ describe("Thecosomata", function () {
       const thecosomataBalanceBeforeWithdrawal: number = Number(
         (await sOhm.balanceOf(thecosomata.address)).toString()
       );
-      sOhmWithdrawalAmount =
-        await thecosomata._calculateOHMAmountRequiredForLP();
+      sOhmWithdrawalAmount = await thecosomata._calculateAmountRequiredForLP(
+        await btrfly.balanceOf(thecosomata.address),
+        true
+      );
 
       // Withdraw sOHM to Thecosomata
       await thecosomata._withdrawSOHMFromTreasury(sOhmWithdrawalAmount);
@@ -331,22 +335,16 @@ describe("Thecosomata", function () {
 
   describe("performUpkeep", () => {
     it("Should add liquidity using borrowed OHM if performUpkeep(true)", async () => {
-      await btrfly.transfer(
-        thecosomata.address,
-        (1e9).toString()
-      );
-      
+      await btrfly.transfer(thecosomata.address, (1e9).toString());
+
       await thecosomata.performUpkeep(
         ethers.utils.defaultAbiCoder.encode(["bool"], [true])
       );
     });
 
     it("Should add liquidity using unstaked sOHM if performUpkeep(false)", async () => {
-      await btrfly.transfer(
-        thecosomata.address,
-        (1e9).toString()
-      );
-      
+      await btrfly.transfer(thecosomata.address, (1e9).toString());
+
       await thecosomata.performUpkeep(
         ethers.utils.defaultAbiCoder.encode(["bool"], [false])
       );

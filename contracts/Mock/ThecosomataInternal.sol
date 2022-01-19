@@ -28,8 +28,12 @@ contract ThecosomataInternal is Thecosomata {
         )
     {}
 
-    function _calculateOHMAmountRequiredForLP() public view returns (uint256) {
-        return calculateOHMAmountRequiredForLP();
+    function _calculateAmountRequiredForLP(uint256 tokenAAmount, bool tokenAIsBTRFLY)
+        public
+        view
+        returns (uint256)
+    {
+        return calculateAmountRequiredForLP(tokenAAmount, tokenAIsBTRFLY);
     }
 
     function _withdrawSOHMFromTreasury(uint256 amount) public {
