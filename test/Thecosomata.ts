@@ -287,29 +287,29 @@ describe("Thecosomata", function () {
   describe("addOHMBTRFLYLiquiditySushiSwap", () => {
     it("Should add OHM-BTRFLY to the LP and transfer the LP tokens", async () => {
       const btrflyBalance = await btrfly.balanceOf(thecosomata.address);
-      const addLiquidity = await (
+      const transferLPTokens = await (
         await thecosomata._addOHMBTRFLYLiquiditySushiSwap(
           await thecosomata._calculateAmountRequiredForLP(btrflyBalance, true),
           btrflyBalance
         )
       ).wait();
-      const addLiquidityEventArgs: any =
-        addLiquidity.events &&
-        addLiquidity.events[addLiquidity.events.length - 1].args;
+      const transferLPTokensEventArgs: any =
+        transferLPTokens.events &&
+        transferLPTokens.events[transferLPTokens.events.length - 1].args;
       const olympusFee: number =
-        addLiquidityEventArgs &&
-        Number(addLiquidityEventArgs.olympusFee.toString());
-      const slpMinted: number =
-        addLiquidityEventArgs &&
-        Number(addLiquidityEventArgs.slpMinted.toString());
+        transferLPTokensEventArgs &&
+        Number(transferLPTokensEventArgs.olympusFee.toString());
+      const redactedDeposit: number =
+        transferLPTokensEventArgs &&
+        Number(transferLPTokensEventArgs.redactedDeposit.toString());
 
       // TO DO: Confirm that Olympus only receives what it's supposed to
 
       expect(olympusFee).to.be.greaterThan(0);
-      expect(slpMinted).to.be.greaterThan(0);
-      expect(Math.floor(((olympusFee + slpMinted) * 5000) / 1000000)).to.equal(
-        olympusFee
-      );
+      expect(redactedDeposit).to.be.greaterThan(0);
+      expect(
+        Math.floor(((olympusFee + redactedDeposit) * 5000) / 1000000)
+      ).to.equal(olympusFee);
     });
   });
 
@@ -402,7 +402,13 @@ describe("Thecosomata", function () {
 
   describe("addLiquidity - unstake", () => {
     it("Should withdraw, unstake, and add liquidity without affecting debt capacity", async () => {
-      await btrfly.transfer(thecosomata.address, 1e9);
+      const btrflyTransfer = 1e9;
+      await btrfly.transfer(thecosomata.address, btrflyTransfer);
+
+      const ohmRequired = await thecosomata._calculateAmountRequiredForLP(
+        btrflyTransfer,
+        true
+      );
 
       // Check whether debt capacity is affected by unstaking
       const debtCapacityBefore = await thecosomata._getRemainingDebtCapacity();
@@ -410,12 +416,19 @@ describe("Thecosomata", function () {
       const debtCapacityAfter = await thecosomata._getRemainingDebtCapacity();
       const unstakeAndAddLiquidityEventArgs: any =
         events && events[events.length - 1].args;
-      const { capacityBefore, capacityAfter, btrflyBurned } =
-        unstakeAndAddLiquidityEventArgs;
+      const {
+        ohmLiquidity,
+        btrflyLiquidity,
+        capacityBefore,
+        capacityAfter,
+        btrflyBurned,
+      } = unstakeAndAddLiquidityEventArgs;
 
+      expect(ohmRequired).to.equal(ohmLiquidity);
+      expect(btrflyLiquidity.eq(btrflyTransfer)).to.equal(true);
       expect(debtCapacityBefore).to.equal(debtCapacityAfter);
-      expect(Number(capacityBefore.toString())).to.be.greaterThan(Number(capacityAfter.toString()))
-      expect(Number(btrflyBurned.toString())).to.equal(0);
+      expect(capacityBefore.gt(capacityAfter)).to.equal(true);
+      expect(btrflyBurned.eq(0)).to.equal(true);
     });
   });
 });

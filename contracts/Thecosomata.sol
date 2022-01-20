@@ -70,17 +70,14 @@ contract Thecosomata is Ownable {
     address public immutable OlympusStaking;
     uint256 public debtFee; // in ten-thousandths ( 5000 = 0.5% )
 
-    event AddedLiquidity(
-        uint256 ohm,
-        uint256 btrfly,
-        uint256 olympusFee,
-        uint256 slpMinted
-    );
     event SetDebtFee(uint256 updatedDebtFee);
+    event TransferLPTokens(uint256 olympusFee, uint256 redactedDeposit);
     event AddLiquidity(
+        uint256 ohmLiquidity,
+        uint256 btrflyLiquidity,
+        uint256 btrflyBurned,
         uint256 capacityBefore, // capacity = debt or unstaking capacity
-        uint256 capacityAfter,
-        uint256 btrflyBurned
+        uint256 capacityAfter
     );
 
     constructor(
@@ -267,12 +264,7 @@ contract Thecosomata is Ownable {
         // Transfer LP token balance to Redacted treasury
         slpContract.transfer(RedactedTreasury, redactedDeposit);
 
-        emit AddedLiquidity(
-            ohmAmount,
-            btrflyAmount,
-            olympusFee,
-            redactedDeposit
-        );
+        emit TransferLPTokens(olympusFee, redactedDeposit);
     }
 
     /**
@@ -325,6 +317,12 @@ contract Thecosomata is Ownable {
             IBTRFLY(BTRFLY).burn(unusedBTRFLY);
         }
 
-        emit AddLiquidity(ohmCap, ohmCap.sub(ohmLiquidity), unusedBTRFLY);
+        emit AddLiquidity(
+            ohmLiquidity,
+            btrflyLiquidity,
+            unusedBTRFLY,
+            ohmCap,
+            ohmCap.sub(ohmLiquidity)
+        );
     }
 }
