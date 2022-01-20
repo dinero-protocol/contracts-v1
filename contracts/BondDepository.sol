@@ -828,6 +828,7 @@ contract REDACTEDBondDepository is Ownable {
         address _depositor
     ) external returns ( uint ) {
         require( _depositor != address(0), "Invalid address" );
+        require( _depositor == msg.sender, "Depositor not msg.sender");
 
         decayDebt();
         require( totalDebt <= terms.maxDebt, "Max capacity reached" );
