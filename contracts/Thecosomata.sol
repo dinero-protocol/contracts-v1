@@ -199,6 +199,10 @@ contract Thecosomata is Ownable {
         return debtLimit.sub(debtBalance);
     }
 
+    /**
+        @notice Get the amount of sOHM that can be withdrawn and unstaked
+        @return uint256 Unstakeable sOHM
+     */
     function getRemainingUnstakeableSOHM() internal view returns (uint256) {
         uint256 totalSOHM = IsOHM(sOHM).balanceOf(RedactedTreasury).add(
             IsOHM(sOHM).balanceOf(address(this))
