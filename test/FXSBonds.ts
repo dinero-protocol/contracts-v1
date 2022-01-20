@@ -16,19 +16,32 @@ import { REDACTEDTreasury, REDACTEDBondDepositoryRewardBased, IERC20 } from '../
 
 import { BigNumber } from 'ethers'
 
-const BCV = '275'
 const VESTING = '33110'
 const MINPRICE = '0'
 const MAXPAYOUT = '100'
 const FEE = '9500'
 const MAXDEBT = ethers.utils.parseEther('10000000000000000000000000000')
 const TITHE = '500'
-const INITIALDEBT = '1500000000000000'
 
-const fxsValueUSD = BigNumber.from(38)
-const btrflyValueUSD = BigNumber.from(3187)
+//GET FROM GSHEET
+const BCV = '1000'
+const initialDebtRatio = 1.724411111
+const fxsFloorValue = 30
+const fxsValueUSD = BigNumber.from(30)
+const btrflyValueUSD = BigNumber.from(1552)
 
-const FXS_WHALE = '0x7a16ff8270133f063aab6c9977183d9e72835428'
+
+//GET FROM CONTRACT IMMEDIATELY BEFORE INITIALISATION
+const btrflySupplyRaw = 239985617870589
+
+const INITIALDEBT = ethers.BigNumber.from(
+  parseInt(
+    (btrflySupplyRaw*initialDebtRatio).toString(),
+    0
+    )
+  )
+
+const FXS_WHALE = '0x5028d77b91a3754fb38b2fbb726af02d1fe44db6'
 
 describe('Live FXS bonds', function () {
   let dao: SignerWithAddress
@@ -80,15 +93,31 @@ describe('Live FXS bonds', function () {
 
     await fxsBond.deployed()
 
+    await treasuryContract.connect(treasuryOwner).queue('8',fxsBond.address)
+    await treasuryContract.connect(treasuryOwner).toggle('8',fxsBond.address,ZERO_ADDRESS)
+
     // Add Bonds as Reserve Assets and set Floor
-    await treasuryContract.connect(treasuryOwner).queue(BigNumber.from(2), fxsBond.address)
+    await treasuryContract.connect(treasuryOwner).queue('2', fxs.address)
     await treasuryContract
       .connect(treasuryOwner)
-      .toggle(BigNumber.from(2), fxsBond.address, ZERO_ADDRESS)
-    await treasuryContract.connect(treasuryOwner).setFloor(fxs.address, '26143790')
+      .toggle('2', fxs.address, ZERO_ADDRESS)
+
+    await treasuryContract.connect(treasuryOwner).
+    setFloor(
+      fxs.address, 
+      ethers.BigNumber.from(
+        parseInt(
+          (1e9/fxsFloorValue).toString(),
+          0
+          )
+        )
+        )
+
+    
   })
 
-  it(`MinPrice of ${MINPRICE} gives [Zeus] a ROI between 5% & 10% out the gate`, async function () {
+  it(`Initial debt calculated gives [Sam] an ROI of -15% to -5% out the gate`, async function () {
+
     await fxsBond.initializeBondTerms(
       BCV,
       VESTING,
@@ -97,9 +126,8 @@ describe('Live FXS bonds', function () {
       FEE,
       MAXDEBT,
       TITHE,
-      INITIALDEBT,
+      INITIALDEBT
     )
-    await fxs.connect(fxsWhale).approve(fxsBond.address, ethers.constants.MaxUint256)
 
     const fxsDepositBtrflyValue = ethers.utils
       .parseUnits('1000', 'gwei')
@@ -107,11 +135,11 @@ describe('Live FXS bonds', function () {
       .div(btrflyValueUSD)
 
     const redemptionMinValue = fxsDepositBtrflyValue
-      .mul(BigNumber.from(101))
+      .mul(BigNumber.from(85))
       .div(BigNumber.from(100))
 
     const redemptionMaxValue = fxsDepositBtrflyValue
-      .mul(BigNumber.from(105))
+      .mul(BigNumber.from(95))
       .div(BigNumber.from(100))
 
     console.log('DEPOSIT VALUE : ' + fxsDepositBtrflyValue.toString())
@@ -120,8 +148,11 @@ describe('Live FXS bonds', function () {
 
     //console.log('bond price in usd', await fxsBond.bondPriceInUSD())
 
+    await fxs.connect(fxsWhale).transfer(recipient.address,ethers.utils.parseUnits('1000', 'ether'))
+    await fxs.connect(recipient).approve(fxsBond.address, ethers.constants.MaxUint256)
+
     await fxsBond
-      .connect(fxsWhale)
+      .connect(recipient)
       .deposit(
         ethers.utils.parseUnits('1000', 'ether'),
         BigNumber.from(300000),
