@@ -13,6 +13,7 @@ import {
   REDACTEDTreasury,
   OlympusStaking,
 } from "../typechain";
+import { Result } from "ethers/lib/utils";
 
 describe("Thecosomata", function () {
   let admin: SignerWithAddress;
@@ -215,13 +216,12 @@ describe("Thecosomata", function () {
   describe("withdrawSOHMFromTreasury", () => {
     it("Should withdraw sOHM from the Redacted treasury", async () => {
       // Check sOHM balance of Redacted treasury before withdraw
-      const redactedBalanceBeforeWithdrawal: number = Number(
-        (await sOhm.balanceOf(redactedTreasury.address)).toString()
+      const redactedBalanceBeforeWithdrawal: BigNumber = await sOhm.balanceOf(
+        redactedTreasury.address
       );
       // Check sOHM balance of Thecosomata before withdraw
-      const thecosomataBalanceBeforeWithdrawal: number = Number(
-        (await sOhm.balanceOf(thecosomata.address)).toString()
-      );
+      const thecosomataBalanceBeforeWithdrawal: BigNumber =
+        await sOhm.balanceOf(thecosomata.address);
       sOhmWithdrawalAmount = await thecosomata._calculateAmountRequiredForLP(
         await btrfly.balanceOf(thecosomata.address),
         true
@@ -231,56 +231,54 @@ describe("Thecosomata", function () {
       await thecosomata._withdrawSOHMFromTreasury(sOhmWithdrawalAmount);
 
       // Check sOHM balance of Redacted treasury after withdraw
-      const redactedBalanceAfterWithdrawal: number = Number(
-        (await sOhm.balanceOf(redactedTreasury.address)).toString()
+      const redactedBalanceAfterWithdrawal: BigNumber = await sOhm.balanceOf(
+        redactedTreasury.address
       );
       // Check sOHM balance of Thecosomata after withdraw
-      const thecosomataBalanceAfterWithdrawal: number = Number(
-        (await sOhm.balanceOf(thecosomata.address)).toString()
+      const thecosomataBalanceAfterWithdrawal: BigNumber = await sOhm.balanceOf(
+        thecosomata.address
       );
 
-      expect(redactedBalanceBeforeWithdrawal).to.equal(
-        redactedTreasurySOhmDeposit
-      );
-      expect(thecosomataBalanceBeforeWithdrawal).to.equal(0);
-      expect(redactedBalanceAfterWithdrawal).to.equal(
-        redactedBalanceBeforeWithdrawal -
-          Number(sOhmWithdrawalAmount.toString())
-      );
-      expect(thecosomataBalanceAfterWithdrawal).to.equal(
-        Number(sOhmWithdrawalAmount.toString())
-      );
+      expect(
+        redactedBalanceBeforeWithdrawal.eq(
+          ethers.BigNumber.from(`${redactedTreasurySOhmDeposit}`)
+        )
+      ).to.equal(true);
+      expect(thecosomataBalanceBeforeWithdrawal.eq(0)).to.equal(true);
+      expect(
+        redactedBalanceAfterWithdrawal.eq(
+          redactedBalanceBeforeWithdrawal.sub(sOhmWithdrawalAmount)
+        )
+      ).to.equal(true);
+      expect(
+        thecosomataBalanceAfterWithdrawal.eq(sOhmWithdrawalAmount)
+      ).to.equal(true);
     });
   });
 
   describe("incurOlympusDebt", () => {
     it("Should use sOHM balance as collateral to borrow OHM", async () => {
-      const sOhmBalanceBeforeBorrow: number = Number(
-        await (await sOhm.balanceOf(thecosomata.address)).toString()
+      const sOhmBalanceBeforeBorrow: BigNumber = await sOhm.balanceOf(
+        thecosomata.address
       );
-      const ohmBalanceBeforeBorrow: number = Number(
-        await (await ohm.balanceOf(thecosomata.address)).toString()
+      const ohmBalanceBeforeBorrow: BigNumber = await ohm.balanceOf(
+        thecosomata.address
       );
 
       await thecosomata._incurOlympusDebt(sOhmWithdrawalAmount);
 
-      const sOhmBalanceAfterBorrow: number = Number(
-        await (await sOhm.balanceOf(thecosomata.address)).toString()
+      const sOhmBalanceAfterBorrow: BigNumber = await sOhm.balanceOf(
+        thecosomata.address
       );
-      const ohmBalanceAfterBorrow: number = Number(
-        await (await ohm.balanceOf(thecosomata.address)).toString()
+      const ohmBalanceAfterBorrow: BigNumber = await ohm.balanceOf(
+        thecosomata.address
       );
 
-      expect(sOhmBalanceBeforeBorrow).to.equal(
-        Number(sOhmWithdrawalAmount.toString())
-      );
+      // Borrowing OHM from Olympus does not change sOHM balance
+      expect(sOhmBalanceBeforeBorrow.eq(sOhmWithdrawalAmount)).to.equal(true);
+      expect(sOhmBalanceAfterBorrow.eq(sOhmWithdrawalAmount)).to.equal(true);
       expect(ohmBalanceBeforeBorrow).to.equal(0);
-      expect(sOhmBalanceAfterBorrow).to.equal(
-        Number(sOhmWithdrawalAmount.toString())
-      );
-      expect(ohmBalanceAfterBorrow).to.equal(
-        Number(sOhmWithdrawalAmount.toString())
-      );
+      expect(ohmBalanceAfterBorrow.eq(sOhmWithdrawalAmount)).to.equal(true);
     });
   });
 
@@ -296,19 +294,15 @@ describe("Thecosomata", function () {
       const transferLPTokensEventArgs: any =
         transferLPTokens.events &&
         transferLPTokens.events[transferLPTokens.events.length - 1].args;
-      const olympusFee: number =
-        transferLPTokensEventArgs &&
-        Number(transferLPTokensEventArgs.olympusFee.toString());
-      const redactedDeposit: number =
-        transferLPTokensEventArgs &&
-        Number(transferLPTokensEventArgs.redactedDeposit.toString());
+      const olympusFee: BigNumber =
+        transferLPTokensEventArgs && transferLPTokensEventArgs.olympusFee;
+      const redactedDeposit: BigNumber =
+        transferLPTokensEventArgs && transferLPTokensEventArgs.redactedDeposit;
 
-      // TO DO: Confirm that Olympus only receives what it's supposed to
-
-      expect(olympusFee).to.be.greaterThan(0);
-      expect(redactedDeposit).to.be.greaterThan(0);
+      expect(olympusFee.gt(0)).to.be.equal(true);
+      expect(redactedDeposit.gt(0)).to.be.equal(true);
       expect(
-        Math.floor(((olympusFee + redactedDeposit) * 5000) / 1000000)
+        olympusFee.add(redactedDeposit).mul(5000).div(1000000).toNumber()
       ).to.equal(olympusFee);
     });
   });
@@ -316,20 +310,17 @@ describe("Thecosomata", function () {
   describe("setDebtFee", () => {
     it("Should change the debt fee", async () => {
       const newDebtFee: number = 1;
-      const debtFeeBeforeChange = Number(
-        (await thecosomata.debtFee()).toString()
-      );
+      const debtFeeBeforeChange: BigNumber = await thecosomata.debtFee();
       const setDebtFeeResponse = await (
         await thecosomata.setDebtFee(newDebtFee)
       ).wait();
-      const debtFeeAfterChange: number = Number(
-        ethers.utils.defaultAbiCoder
-          .decode(["uint256"], setDebtFeeResponse.logs[0].data)
-          .toString()
+      const [debtFeeAfterChange]: Result = ethers.utils.defaultAbiCoder.decode(
+        ["uint256"],
+        setDebtFeeResponse.logs[0].data
       );
 
-      expect(debtFeeBeforeChange).to.equal(debtFee);
-      expect(debtFeeAfterChange).to.equal(newDebtFee);
+      expect(debtFeeBeforeChange.eq(debtFee)).to.equal(true);
+      expect(debtFeeAfterChange.eq(newDebtFee)).to.equal(true);
     });
 
     it("Should only be callable by the owner", async () => {
@@ -340,19 +331,17 @@ describe("Thecosomata", function () {
   describe("getRemainingUnstakeableSOHM", () => {
     it("Should return the correct amount of sOHM available to unstake", async () => {
       const sOHMReservedForOlympus: number = olympusTreasuryDebtLimit * 2;
-      const redactedTreasurySOHMBalance: number = Number(
-        (await sOhm.balanceOf(redactedTreasury.address)).toString()
+      const redactedTreasurySOHMBalance: BigNumber = await sOhm.balanceOf(
+        redactedTreasury.address
       );
-      const thecosomataSOHMBalance: number = Number(
-        (await sOhm.balanceOf(thecosomata.address)).toString()
+      const thecosomataSOHMBalance: BigNumber = await sOhm.balanceOf(
+        thecosomata.address
       );
-      const availableSOHMToUnstake =
-        redactedTreasurySOHMBalance +
-        thecosomataSOHMBalance -
-        sOHMReservedForOlympus;
-      const unstakeableSOHM: number = Number(
-        (await thecosomata._getRemainingUnstakeableSOHM()).toString()
-      );
+      const availableSOHMToUnstake = redactedTreasurySOHMBalance
+        .add(thecosomataSOHMBalance)
+        .sub(ethers.BigNumber.from(`${sOHMReservedForOlympus}`));
+      const unstakeableSOHM: BigNumber =
+        await thecosomata._getRemainingUnstakeableSOHM();
 
       expect(availableSOHMToUnstake).to.equal(unstakeableSOHM);
     });
@@ -381,7 +370,7 @@ describe("Thecosomata", function () {
       // There should be about 15 OHM left worth of debt
       // We add 5 OHM per 1 BTRFLY worth of liquidity
       // Transferring 4 BTRFLY should result in debt capacity being reached
-      await btrfly.transfer(thecosomata.address, (4e9).toString());
+      await btrfly.transfer(thecosomata.address, `${4e9}`);
 
       const debtCapacity = await thecosomata._getRemainingDebtCapacity();
       const { events } = await (await thecosomata._addLiquidity(true)).wait();
@@ -393,10 +382,12 @@ describe("Thecosomata", function () {
       const btrflyBalance = await btrfly.balanceOf(thecosomata.address);
 
       expect(capacityBefore).to.equal(debtCapacity);
-      expect(Number(capacityAfter.toString())).to.equal(0);
-      expect(Number(btrflyBurned.toString()) / 1e9).to.equal(1);
-      expect(Number(ohmBalance.toString())).to.equal(0);
-      expect(Number(btrflyBalance.toString())).to.equal(0);
+      expect(capacityAfter.eq(0)).to.equal(true);
+      expect(btrflyBurned.div(1e9).eq(1)).to.equal(
+        true
+      );
+      expect(ohmBalance.eq(0)).to.equal(true);
+      expect(btrflyBalance.eq(0)).to.equal(true);
     });
   });
 
