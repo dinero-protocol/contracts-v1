@@ -6,7 +6,7 @@ import { impersonateAddressAndReturnSigner, mineBlocks } from './utils'
 
 import {
   TREASURY_ADDRESS,
-  FXS_ADDRESS,
+  CVX_ADDRESS,
   BTRFLY_ADDRESS,
   MULTISIG_ADDRESS,
   ZERO_ADDRESS,
@@ -24,15 +24,15 @@ const MAXDEBT = ethers.utils.parseEther('10000000000000000000000000000')
 const TITHE = '500'
 
 //GET FROM GSHEET
-const BCV = '1000'
-const initialDebtRatio = 1.450010875
-const fxsFloorValue = 30
-const fxsValueUSD = BigNumber.from(2639)
-const btrflyValueUSD = BigNumber.from(114800)
+const BCV = '415'
+const initialDebtRatio = 1.630319901
+const cvxFloorValue = 32
+const cvxValueUSD = BigNumber.from('2684')
+const btrflyValueUSD = BigNumber.from('56751')
 
 
 //GET FROM CONTRACT IMMEDIATELY BEFORE INITIALISATION
-const btrflySupplyRaw = 239985617870589
+const btrflySupplyRaw = 294575743846972
 
 const INITIALDEBT = ethers.BigNumber.from(
   parseInt(
@@ -43,17 +43,17 @@ const INITIALDEBT = ethers.BigNumber.from(
 
 console.log( "Initial debt : " + INITIALDEBT.toString())
 
-const FXS_WHALE = '0x5028d77b91a3754fb38b2fbb726af02d1fe44db6'
+const CVX_WHALE = '0x0aca67fa70b142a3b9bf2ed89a81b40ff85dacdc'
 
-describe('Live FXS bonds', function () {
+describe('Live CVX bonds', function () {
   let dao: SignerWithAddress
   let olympusDao: SignerWithAddress
   let recipient: SignerWithAddress
   let treasuryOwner: SignerWithAddress
   let btrfly: IERC20
-  let fxs: IERC20
-  let fxsBond: REDACTEDBondDepositoryRewardBased
-  let fxsWhale: SignerWithAddress
+  let cvx: IERC20
+  let cvxBond: REDACTEDBondDepositoryRewardBased
+  let cvxWhale: SignerWithAddress
   let treasuryContract: REDACTEDTreasury
 
   beforeEach(async function () {
@@ -61,16 +61,16 @@ describe('Live FXS bonds', function () {
 
     //impersonate Treasury owner and whale
     treasuryOwner = await impersonateAddressAndReturnSigner(dao, MULTISIG_ADDRESS)
-    fxsWhale = await impersonateAddressAndReturnSigner(dao, FXS_WHALE)
+    cvxWhale = await impersonateAddressAndReturnSigner(dao, CVX_WHALE)
 
     btrfly = (await ethers.getContractAt(
       '@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20',
       BTRFLY_ADDRESS,
     )) as IERC20
 
-    fxs = (await ethers.getContractAt(
+    cvx = (await ethers.getContractAt(
       '@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20',
-      FXS_ADDRESS,
+      CVX_ADDRESS,
     )) as IERC20
 
     // get Treasury contract
@@ -81,11 +81,11 @@ describe('Live FXS bonds', function () {
     )
 
     // deploy LPbonds
-    const FXSBond = await ethers.getContractFactory('REDACTEDBondDepositoryRewardBased')
+    const CVXBond = await ethers.getContractFactory('REDACTEDBondDepositoryRewardBased')
 
-    fxsBond = await FXSBond.deploy(
+    cvxBond = await CVXBond.deploy(
       BTRFLY_ADDRESS,
-      FXS_ADDRESS,
+      CVX_ADDRESS,
       TREASURY_ADDRESS,
       dao.address,
       ZERO_ADDRESS,
@@ -93,23 +93,23 @@ describe('Live FXS bonds', function () {
       olympusDao.address,
     )
 
-    await fxsBond.deployed()
+    await cvxBond.deployed()
 
-    await treasuryContract.connect(treasuryOwner).queue('8',fxsBond.address)
-    await treasuryContract.connect(treasuryOwner).toggle('8',fxsBond.address,ZERO_ADDRESS)
+    await treasuryContract.connect(treasuryOwner).queue('8',cvxBond.address)
+    await treasuryContract.connect(treasuryOwner).toggle('8',cvxBond.address,ZERO_ADDRESS)
 
     // Add Bonds as Reserve Assets and set Floor
-    /*await treasuryContract.connect(treasuryOwner).queue('2', fxs.address)
+    /*await treasuryContract.connect(treasuryOwner).queue('2', cvx.address)
     await treasuryContract
       .connect(treasuryOwner)
-      .toggle('2', fxs.address, ZERO_ADDRESS)
+      .toggle('2', cvx.address, ZERO_ADDRESS)
 
     await treasuryContract.connect(treasuryOwner).
     setFloor(
-      fxs.address, 
+      cvx.address, 
       ethers.BigNumber.from(
         parseInt(
-          (1e9/fxsFloorValue).toString(),
+          (1e9/cvxFloorValue).toString(),
           0
           )
         )
@@ -118,9 +118,9 @@ describe('Live FXS bonds', function () {
     
   })
 
-  it(`Initial debt calculated gives [Sam] an ROI of -15% to -5% out the gate`, async function () {
+  it(`Initial debt calculated gives [Sam] an ROI of 5% to -5% out the gate`, async function () {
 
-    await fxsBond.initializeBondTerms(
+    await cvxBond.initializeBondTerms(
       BCV,
       VESTING,
       MINPRICE,
@@ -131,29 +131,29 @@ describe('Live FXS bonds', function () {
       INITIALDEBT
     )
 
-    const fxsDepositBtrflyValue = ethers.utils
+    const cvxDepositBtrflyValue = ethers.utils
       .parseUnits('1000', 'gwei')
-      .mul(fxsValueUSD)
+      .mul(cvxValueUSD)
       .div(btrflyValueUSD)
 
-    const redemptionMinValue = fxsDepositBtrflyValue
-      .mul(BigNumber.from(85))
-      .div(BigNumber.from(100))
-
-    const redemptionMaxValue = fxsDepositBtrflyValue
+    const redemptionMinValue = cvxDepositBtrflyValue
       .mul(BigNumber.from(95))
       .div(BigNumber.from(100))
 
-    console.log('DEPOSIT VALUE : ' + fxsDepositBtrflyValue.toString())
+    const redemptionMaxValue = cvxDepositBtrflyValue
+      .mul(BigNumber.from(105))
+      .div(BigNumber.from(100))
+
+    console.log('DEPOSIT VALUE : ' + cvxDepositBtrflyValue.toString())
     console.log('MIN VALUE TO SATISFY REQ : ' + redemptionMinValue.toString())
     console.log('MAX VALUE TO SATISFY REQ : ' + redemptionMaxValue.toString())
 
-    //console.log('bond price in usd', await fxsBond.bondPriceInUSD())
+    //console.log('bond price in usd', await cvxBond.bondPriceInUSD())
 
-    await fxs.connect(fxsWhale).transfer(recipient.address,ethers.utils.parseUnits('1000', 'ether'))
-    await fxs.connect(recipient).approve(fxsBond.address, ethers.constants.MaxUint256)
+    await cvx.connect(cvxWhale).transfer(recipient.address,ethers.utils.parseUnits('1000', 'ether'))
+    await cvx.connect(recipient).approve(cvxBond.address, ethers.constants.MaxUint256)
 
-    await fxsBond
+    await cvxBond
       .connect(recipient)
       .deposit(
         ethers.utils.parseUnits('1000', 'ether'),
@@ -163,7 +163,7 @@ describe('Live FXS bonds', function () {
 
     await mineBlocks(34000)
 
-    await fxsBond.connect(recipient).redeem(recipient.address, false)
+    await cvxBond.connect(recipient).redeem(recipient.address, false)
 
     const redemptionAmount = await btrfly.balanceOf(recipient.address)
 

@@ -25,10 +25,10 @@ const TITHE = '500'
 
 //GET FROM GSHEET
 const BCV = '95'
-const initialDebtRatio = 17.79612079
+const initialDebtRatio = 13.26744143
 const wethFloorValue = 3000
-const wethValueUSD = BigNumber.from(3060)
-const btrflyValueUSD = BigNumber.from(1552)
+const wethValueUSD = BigNumber.from(2904)
+const btrflyValueUSD = BigNumber.from(1098)
 
 
 //GET FROM CONTRACT IMMEDIATELY BEFORE INITIALISATION
@@ -40,6 +40,8 @@ const INITIALDEBT = ethers.BigNumber.from(
     0
     )
   )
+
+console.log( "Initial debt : " + INITIALDEBT.toString())
 
 const WETH_WHALE = '0x2feb1512183545f48f6b9c5b4ebfcaf49cfca6f3'
 
@@ -97,7 +99,7 @@ describe('Live WETH bonds', function () {
     await treasuryContract.connect(treasuryOwner).toggle('8',wethBond.address,ZERO_ADDRESS)
 
     // Add Bonds as Reserve Assets and set Floor
-    await treasuryContract.connect(treasuryOwner).queue('2', weth.address)
+    /*await treasuryContract.connect(treasuryOwner).queue('2', weth.address)
     await treasuryContract
       .connect(treasuryOwner)
       .toggle('2', weth.address, ZERO_ADDRESS)
@@ -111,7 +113,7 @@ describe('Live WETH bonds', function () {
           0
           )
         )
-        )
+        )*/
 
     
   })

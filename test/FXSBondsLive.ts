@@ -83,23 +83,15 @@ describe('Live FXS bonds', function () {
     // deploy LPbonds
     const FXSBond = await ethers.getContractFactory('REDACTEDBondDepositoryRewardBased')
 
-    fxsBond = await FXSBond.deploy(
-      BTRFLY_ADDRESS,
-      FXS_ADDRESS,
-      TREASURY_ADDRESS,
-      dao.address,
-      ZERO_ADDRESS,
-      olympusDao.address,
-      olympusDao.address,
-    )
+    fxsBond = await ethers.getContractAt("REDACTEDBondDepositoryRewardBased","0xfd7bda47cbeeed93c897273585f666f8d1cc8d45")
 
-    await fxsBond.deployed()
+    //await fxsBond.deployed()
 
-    await treasuryContract.connect(treasuryOwner).queue('8',fxsBond.address)
+   /* await treasuryContract.connect(treasuryOwner).queue('8',fxsBond.address)
     await treasuryContract.connect(treasuryOwner).toggle('8',fxsBond.address,ZERO_ADDRESS)
 
     // Add Bonds as Reserve Assets and set Floor
-    /*await treasuryContract.connect(treasuryOwner).queue('2', fxs.address)
+    await treasuryContract.connect(treasuryOwner).queue('2', fxs.address)
     await treasuryContract
       .connect(treasuryOwner)
       .toggle('2', fxs.address, ZERO_ADDRESS)
@@ -120,7 +112,7 @@ describe('Live FXS bonds', function () {
 
   it(`Initial debt calculated gives [Sam] an ROI of -15% to -5% out the gate`, async function () {
 
-    await fxsBond.initializeBondTerms(
+    /*await fxsBond.initializeBondTerms(
       BCV,
       VESTING,
       MINPRICE,
@@ -129,7 +121,7 @@ describe('Live FXS bonds', function () {
       MAXDEBT,
       TITHE,
       INITIALDEBT
-    )
+    )*/
 
     const fxsDepositBtrflyValue = ethers.utils
       .parseUnits('1000', 'gwei')
