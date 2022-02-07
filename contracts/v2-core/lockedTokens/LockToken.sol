@@ -7,11 +7,19 @@
 // - avgDepositTime
 // - depositAmount
 // - lockType
+// - salt
 // contract wide variables
 // - cumulative conviction
-// rageQuit - rage quit calculator
-// store voting power on-chain, custom transfer hooks
-// - snapshots of users votes
-// - logic to deal with locks (validUntil)
+
+// snapshots (for conviction staking)
+// - linked to users
+// - must be updated when balances change!!
+
+// merge NFTs
+// - only if lock type and expiration is same
+// split NFTs
+// - id
+// - array with basis point distributions
+
 
 // events for deposits, locks etc
