@@ -2,9 +2,12 @@
 pragma solidity 0.8.0;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 interface IBTRFLY is IERC20 {
     function burn(uint256 amount) external;
+
+    function decimals() external view returns (uint8);
 }
 
 interface IRedactedTreasury {
@@ -12,21 +15,22 @@ interface IRedactedTreasury {
 }
 
 interface ICurveCryptoPool {
-    
-    function add_liquidity(
-        uint256[2] amounts,
-        uint256 min_mint_amount 
-    ) external payable;
+    function add_liquidity(uint256[2] calldata amounts, uint256 min_mint_amount)
+        external
+        payable;
 
-    function calc_token_amount(
-         uint256[2] amounts
-    ) external view returns (uint256);
+    function calc_token_amount(uint256[2] calldata amounts)
+        external
+        view
+        returns (uint256);
 
+    // Would be replaced by Chainlink based oracle
+    function price_oracle() external view returns (uint256);
 }
 
-contract ThecosomataETH {
-
+contract ThecosomataETH is Ownable {
     address public immutable BTRFLY;
+    address public immutable WETH;
     address public immutable CURVEPOOL;
     address public immutable TREASURY;
 
@@ -38,23 +42,28 @@ contract ThecosomataETH {
 
     constructor(
         address _BTRFLY,
+        address _WETH,
         address _TREASURY,
-        address _CURVEPOOL,
+        address _CURVEPOOL
     ) {
-        require(_BTRFLY != address(0));
+        require(_BTRFLY != address(0), "Invalid BTRFLY address");
         BTRFLY = _BTRFLY;
 
-        require(_CURVEPOOL != address(0));
-        sushiFactory = _sushiFactory;
+        require(_WETH != address(0), "Invalid WETH address");
+        WETH = _WETH;
 
-        require(_TREASURY != address(0));
+        require(_CURVEPOOL != address(0), "Invalid POOL address");
+        CURVEPOOL = _CURVEPOOL;
+
+        require(_TREASURY != address(0), "Invalid TREASURY address");
         TREASURY = _TREASURY;
 
-        IBTRFLY(_BTRFLY).approve(_CURVEPOOL, 2**256 - 1);
+        IERC20(_BTRFLY).approve(_CURVEPOOL, 2**256 - 1);
+        IERC20(_WETH).approve(_CURVEPOOL, 2**256 - 1);
     }
 
-    function checkUpkeep(bytes calldata checkData)
-        external
+    function checkUpkeep()
+        public
         view
         returns (bool upkeepNeeded)
     {
@@ -63,35 +72,51 @@ contract ThecosomataETH {
         }
     }
 
-    function calculateAmountRequiredForLP(
-        uint256 tokenAAmount,
-        bool tokenAIsBTRFLY
-    ) internal view returns (uint256) {
-        // write logic here pls
+    function calculateAmountRequiredForLP(uint256 amount, bool isBTRFLY)
+        internal
+        view
+        returns (uint256)
+    {
+        // Default price is from ETH to BTRFLY
+        uint256 ethDecimals = 18;
+        uint256 priceOracle = ICurveCryptoPool(CURVEPOOL).price_oracle();
+
+        if (isBTRFLY) {
+            return
+                (((amount * priceOracle) / (10**18)) * (10**ethDecimals)) /
+                (10**IBTRFLY(BTRFLY).decimals());
+        }
+
+        return
+            (((amount * (10**18)) / priceOracle) *
+                (10**IBTRFLY(BTRFLY).decimals())) / (10**ethDecimals);
     }
 
-    function addLiquidity(
-        uint256 ethAmount,
-        uint256 btrflyAmount
-    ) internal {
-        // use calc_token_amount
-        // use add_liquidity
+    function addLiquidity(uint256 ethAmount, uint256 btrflyAmount) internal {
+        uint256[2] memory amounts = [ethAmount, btrflyAmount];
+        uint256 expectedAmount = ICurveCryptoPool(CURVEPOOL).calc_token_amount(
+            amounts
+        );
+
+        ICurveCryptoPool(CURVEPOOL).add_liquidity(amounts, expectedAmount);
     }
 
-    function performUpkeep() internal {
+    function performUpkeep() external onlyOwner {
+        require(checkUpkeep(), "Invalid upkeep state");
+
         uint256 btrfly = IBTRFLY(BTRFLY).balanceOf(address(this));
-
         uint256 ethAmount = calculateAmountRequiredForLP(btrfly, true);
-
-        uint256 ethCap = address(this).balance;
-
+        uint256 ethCap = IERC20(WETH).balanceOf(TREASURY);
         uint256 ethLiquidity = ethCap > ethAmount ? ethAmount : ethCap;
 
         // Use BTRFLY balance if remaining capacity is enough, otherwise, calculate BTRFLY amount
         uint256 btrflyLiquidity = ethCap > ethAmount
-            ? btrfly 
+            ? btrfly
             : calculateAmountRequiredForLP(ethLiquidity, false);
 
+        IRedactedTreasury(TREASURY).manage(WETH, ethLiquidity);
+
+        require(ethLiquidity > 0 || btrflyLiquidity > 0, "Invalid amounts");
         addLiquidity(ethLiquidity, btrflyLiquidity);
 
         uint256 unusedBTRFLY = IBTRFLY(BTRFLY).balanceOf(address(this));
@@ -100,10 +125,7 @@ contract ThecosomataETH {
             IBTRFLY(BTRFLY).burn(unusedBTRFLY);
         }
 
-        emit AddLiquidity(
-            // insert vars pls
-        )
-
+        emit AddLiquidity(ethLiquidity, btrflyLiquidity, unusedBTRFLY);
     }
 
     function withdraw(
@@ -115,12 +137,11 @@ contract ThecosomataETH {
         IERC20(token).transfer(recipient, amount);
     }
 
-    function withdrawETH(
-        uint256 amount,
-        address payable recipient
-    ) external onlyOwner {
+    function withdrawETH(uint256 amount, address payable recipient)
+        external
+        onlyOwner
+    {
         require(recipient != address(0), "Invalid recipient");
         recipient.transfer(amount);
     }
-
 }
