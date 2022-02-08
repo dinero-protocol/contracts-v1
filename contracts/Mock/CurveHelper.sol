@@ -39,6 +39,8 @@ interface ICurveCryptoPool {
 
     // Would be replaced by Chainlink based oracle
     function price_oracle() external view returns (uint256);
+
+    function token() external view returns (address);
 }
 
 interface IWETH {
@@ -84,6 +86,16 @@ contract CurveHelper {
 
     function poolAddress() public view returns (address) {
         return deployer.find_pool_for_coins(address(weth), btrfly, 0);
+    }
+
+    function poolTokenAddress() public view returns (address) {
+        address pool = poolAddress();
+        return ICurveCryptoPool(pool).token();
+    }
+
+    function poolTokenBalance(address account) external view returns (uint256) {
+        address token = poolTokenAddress();
+        return IERC20(token).balanceOf(account);
     }
 
     function initPool(uint256 amount1, uint256 amount2) external {

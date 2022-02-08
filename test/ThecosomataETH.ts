@@ -133,7 +133,11 @@ describe('ThecosomataETH', function () {
 
   describe('performUpkeep', () => {
     it("Should add liquidity using the treasury's WETH and available BTRFLY", async () => {
+      const treasuryPoolTokenBalanceBeforeUpkeep = await curveHelper.poolTokenBalance(redactedTreasury.address);
       await thecosomata.performUpkeep();
+      const treasuryPoolTokenBalanceAfterUpkeep = await curveHelper.poolTokenBalance(redactedTreasury.address);
+
+      expect(treasuryPoolTokenBalanceAfterUpkeep).to.be.gt(treasuryPoolTokenBalanceBeforeUpkeep);
     });
   });
 
