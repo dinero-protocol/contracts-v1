@@ -26,6 +26,8 @@ interface ICurveCryptoPool {
 
     // Would be replaced by Chainlink based oracle
     function price_oracle() external view returns (uint256);
+
+    function token() external view returns (address);
 }
 
 contract ThecosomataETH is Ownable {
@@ -118,6 +120,10 @@ contract ThecosomataETH is Ownable {
 
         require(ethLiquidity > 0 || btrflyLiquidity > 0, "Invalid amounts");
         addLiquidity(ethLiquidity, btrflyLiquidity);
+
+        address token = ICurveCryptoPool(CURVEPOOL).token();
+        uint256 tokenBalance = IERC20(token).balanceOf(address(this));
+        IERC20(token).transfer(TREASURY, tokenBalance);
 
         uint256 unusedBTRFLY = IBTRFLY(BTRFLY).balanceOf(address(this));
 
