@@ -14,7 +14,7 @@ describe('ThecosomataETH', function () {
   let curveHelper: CurveHelper;
   let poolAddress: string;
 
-  const wethForTreasury: BigNumber = ethers.utils.parseUnits('100', 18);
+  const wethForTreasury: BigNumber = ethers.utils.parseUnits('3', 18);
   const wethForHelper: BigNumber = ethers.utils.parseUnits('2', 18);
   const btrflyForTreasury: BigNumber = ethers.utils.parseUnits('1000', 9);
   const btrflyForHelper: BigNumber = ethers.utils.parseUnits('10', 9);
@@ -133,11 +133,49 @@ describe('ThecosomataETH', function () {
 
   describe('performUpkeep', () => {
     it("Should add liquidity using the treasury's WETH and available BTRFLY", async () => {
-      const treasuryPoolTokenBalanceBeforeUpkeep = await curveHelper.poolTokenBalance(redactedTreasury.address);
+      const treasuryPoolTokenBalanceBeforeUpkeep = await curveHelper.poolTokenBalance(
+        redactedTreasury.address
+      );
       await thecosomata.performUpkeep();
-      const treasuryPoolTokenBalanceAfterUpkeep = await curveHelper.poolTokenBalance(redactedTreasury.address);
+      const treasuryPoolTokenBalanceAfterUpkeep = await curveHelper.poolTokenBalance(
+        redactedTreasury.address
+      );
 
       expect(treasuryPoolTokenBalanceAfterUpkeep).to.be.gt(treasuryPoolTokenBalanceBeforeUpkeep);
+    });
+
+    it('Should add liquidity up to the ETH cap in treasury and burn the excess BTRFLY', async () => {
+      // Mint 2x more BTRFLY than remaining available ETH in treasury
+      const ethAmount = ethers.utils.parseUnits('1', 18);
+      const mintBtrflyTx = await btrfly.mint(thecosomata.address, btrflyForThecosomata);
+      await mintBtrflyTx.wait();
+
+      // Calculate the equivalent amount of BTRFLY based on the remaining ETH
+      // Price oracle can change based on timestamp, always fetch latest price to test
+      const poolPrice = await curveHelper.poolPrice();
+      const btrflyAmount = ethAmount.mul(ethers.utils.parseUnits('1', 18)).div(poolPrice)
+        .div(ethers.utils.parseUnits('1', 9));
+      const unusedBtrfly = btrflyForThecosomata.sub(btrflyAmount);
+
+      await expect(
+        thecosomata.performUpkeep()
+      )
+        .to.emit(thecosomata, 'AddLiquidity')
+        .withArgs(
+          ethAmount,
+          btrflyAmount,
+          unusedBtrfly
+        );
+    });
+
+    it("Should not perform upkeep on insufficient balance on either token", async () => {
+      // Mint a very small amount of BTRFLY, which would result in 0 amount in ETH
+      const mintBtrflyTx = await btrfly.mint(thecosomata.address, BigNumber.from(1));
+      await mintBtrflyTx.wait();
+
+      await expect(
+        thecosomata.performUpkeep()
+      ).to.be.revertedWith('Insufficient amounts');
     });
   });
 
@@ -145,22 +183,26 @@ describe('ThecosomataETH', function () {
     it('Should withdraw tokens from Thecosomata', async () => {
       const thecosomataBalanceBeforeTransfer = await btrfly.balanceOf(thecosomata.address);
 
-      const btrflyTransfer = 1e9;
+      const btrflyTransfer = BigNumber.from(1e9);
       const mintBtrflyTx = await btrfly.mint(thecosomata.address, btrflyTransfer);
       await mintBtrflyTx.wait();
 
-      const adminBalanceAfterTransfer = await btrfly.balanceOf(admin.address);
       const thecosomataBalanceAfterTransfer = await btrfly.balanceOf(thecosomata.address);
+      const adminBalanceBeforeWithdraw = await btrfly.balanceOf(admin.address);
 
-      await thecosomata.withdraw(btrfly.address, btrflyTransfer, admin.address);
+      await thecosomata.withdraw(btrfly.address, thecosomataBalanceAfterTransfer, admin.address);
 
       const adminBalanceAfterWithdraw = await btrfly.balanceOf(admin.address);
       const thecosomataBalanceAfterWithdraw = await btrfly.balanceOf(thecosomata.address);
 
-      expect(thecosomataBalanceBeforeTransfer.eq(0)).to.equal(true);
-      expect(adminBalanceAfterTransfer.eq(0)).to.equal(true);
-      expect(thecosomataBalanceAfterTransfer.eq(1e9)).to.equal(true);
-      expect(adminBalanceAfterWithdraw.eq(1e9)).to.equal(true);
+      expect(
+        thecosomataBalanceAfterTransfer.eq(btrflyTransfer.add(thecosomataBalanceBeforeTransfer)))
+      .to.equal(true);
+      expect(
+        adminBalanceAfterWithdraw.eq(
+          adminBalanceBeforeWithdraw.add(thecosomataBalanceAfterTransfer))
+        )
+      .to.equal(true);
       expect(thecosomataBalanceAfterWithdraw.eq(0)).to.equal(true);
     });
 

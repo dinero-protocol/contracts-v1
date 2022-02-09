@@ -98,6 +98,11 @@ contract CurveHelper {
         return IERC20(token).balanceOf(account);
     }
 
+    function poolPrice() external view returns (uint256) {
+        address pool = poolAddress();
+        return ICurveCryptoPool(pool).price_oracle();
+    }
+
     function initPool(uint256 amount1, uint256 amount2) external {
         address pool = poolAddress();
         uint256[2] memory amounts = [amount1, amount2];

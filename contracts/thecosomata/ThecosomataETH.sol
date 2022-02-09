@@ -118,9 +118,11 @@ contract ThecosomataETH is Ownable {
 
         IRedactedTreasury(TREASURY).manage(WETH, ethLiquidity);
 
-        require(ethLiquidity > 0 || btrflyLiquidity > 0, "Invalid amounts");
+        // Only complete upkeep only on sufficient amounts
+        require(ethLiquidity > 0 && btrflyLiquidity > 0, "Insufficient amounts");
         addLiquidity(ethLiquidity, btrflyLiquidity);
 
+        // Transfer out the pool token to treasury
         address token = ICurveCryptoPool(CURVEPOOL).token();
         uint256 tokenBalance = IERC20(token).balanceOf(address(this));
         IERC20(token).transfer(TREASURY, tokenBalance);
@@ -141,13 +143,5 @@ contract ThecosomataETH is Ownable {
     ) external onlyOwner {
         require(recipient != address(0), "Invalid recipient");
         IERC20(token).transfer(recipient, amount);
-    }
-
-    function withdrawETH(uint256 amount, address payable recipient)
-        external
-        onlyOwner
-    {
-        require(recipient != address(0), "Invalid recipient");
-        recipient.transfer(amount);
     }
 }
