@@ -36,6 +36,9 @@ contract ThecosomataETH is Ownable {
     address public immutable CURVEPOOL;
     address public immutable TREASURY;
 
+    uint256 private immutable _btrflyDecimals;
+    uint256 private immutable _ethDecimals;
+
     event AddLiquidity(
         uint256 ethLiquidity,
         uint256 btrflyLiquidity,
@@ -62,6 +65,9 @@ contract ThecosomataETH is Ownable {
 
         IERC20(_BTRFLY).approve(_CURVEPOOL, 2**256 - 1);
         IERC20(_WETH).approve(_CURVEPOOL, 2**256 - 1);
+
+        _btrflyDecimals = IBTRFLY(_BTRFLY).decimals();
+        _ethDecimals = IBTRFLY(_WETH).decimals();
     }
 
     function checkUpkeep()
@@ -80,16 +86,15 @@ contract ThecosomataETH is Ownable {
         returns (uint256)
     {
         // Default price is from ETH to BTRFLY (in 18 decimals)
-        uint256 ethDecimals = 18;
         uint256 priceOracle = ICurveCryptoPool(CURVEPOOL).price_oracle();
 
         if (isBTRFLY) {
-            return ((amount * priceOracle) / (10**IBTRFLY(BTRFLY).decimals()));
+            return ((amount * priceOracle) / (10**_btrflyDecimals));
         }
 
         return
             (((amount * (10**18)) / priceOracle) *
-                (10**IBTRFLY(BTRFLY).decimals())) / (10**ethDecimals);
+                (10**_btrflyDecimals)) / (10**_ethDecimals);
     }
 
     function addLiquidity(uint256 ethAmount, uint256 btrflyAmount) internal {
