@@ -85,7 +85,7 @@ contract ThecosomataETH is Ownable {
         view
         returns (uint256)
     {
-        // Default price is from ETH to BTRFLY (in 18 decimals)
+        // Default price is based off "1 BTRFLY = X ETH", in 10^18 format
         uint256 priceOracle = ICurveCryptoPool(CURVEPOOL).price_oracle();
 
         if (isBTRFLY) {
