@@ -169,6 +169,16 @@ describe('ThecosomataETH', function () {
     });
 
     it("Should not perform upkeep on insufficient balance on either token", async () => {
+      // Mint additional WETH to treasury
+      const wrapForTreasuryTx = await curveHelper.wrapAndTransfer(
+        redactedTreasury.address,
+        wethForTreasury,
+        {
+          value: wethForTreasury,
+        }
+      );
+      await wrapForTreasuryTx.wait();
+
       // Mint a very small amount of BTRFLY, which would result in 0 amount in ETH
       const mintBtrflyTx = await btrfly.mint(thecosomata.address, BigNumber.from(1));
       await mintBtrflyTx.wait();
