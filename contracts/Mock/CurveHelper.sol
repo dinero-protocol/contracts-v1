@@ -49,6 +49,8 @@ interface IWETH {
     function transfer(address to, uint256 amount) external returns (bool);
 
     function approve(address spender, uint256 amount) external returns (bool);
+
+    function balanceOf(address account) external view returns (uint256);
 }
 
 contract CurveHelper {
@@ -93,6 +95,12 @@ contract CurveHelper {
         return ICurveCryptoPool(pool).token();
     }
 
+    function poolMinimumToken(uint256 amount1, uint256 amount2) external view returns (uint256) {
+        address pool = poolAddress();
+        uint256[2] memory amounts = [amount1, amount2];
+        return ICurveCryptoPool(pool).calc_token_amount(amounts);
+    }
+
     function poolTokenBalance(address account) external view returns (uint256) {
         address token = poolTokenAddress();
         return IERC20(token).balanceOf(account);
@@ -115,5 +123,9 @@ contract CurveHelper {
     function wrapAndTransfer(address to, uint256 amount) external payable {
         weth.deposit{value: msg.value}();
         weth.transfer(to, amount);
+    }
+
+    function wethBalance(address account) external view returns (uint256) {
+        return IWETH(weth).balanceOf(account);
     }
 }

@@ -112,6 +112,31 @@ describe('ThecosomataETH', function () {
     await initPoolTx.wait();
   });
 
+  describe('setSlippage', () => {
+    it('Should allow owner to update slippage', async () => {
+      const newSlippage = 10; // 1% slippage
+      await thecosomata.setSlippage(newSlippage);
+
+      const slippage = await thecosomata.slippage();
+
+      expect(slippage).to.equal(newSlippage);
+    });
+
+    it('Should not allow owner to update slippage to be >= 10%', async () => {
+      const newSlippage = 100; // 10% slippage
+
+      await expect(
+        thecosomata.setSlippage(newSlippage)
+      ).to.be.revertedWith('Slippage too high');
+    });
+
+    it('Should not allow non-owner to update slippage', async () => {
+      await expect(
+        thecosomata.connect(simp).setSlippage(1)
+      ).to.be.revertedWith('Ownable: caller is not the owner');
+    });
+  });
+
   describe('checkUpkeep', () => {
     it('Should not request upkeep if BTRFLY balance is 0', async () => {
       const btrflyBalance = await btrfly.balanceOf(thecosomata.address);
@@ -133,6 +158,12 @@ describe('ThecosomataETH', function () {
 
   describe('performUpkeep', () => {
     it("Should add liquidity using the treasury's WETH and available BTRFLY", async () => {
+      const btrflyBalance = await btrfly.balanceOf(thecosomata.address);
+      const ethBalance = await curveHelper.wethBalance(thecosomata.address);
+      const slippage = await thecosomata.slippage();
+      const expectedLpToken = await curveHelper.poolMinimumToken(ethBalance, btrflyBalance);
+      const minLpToken = expectedLpToken.sub(expectedLpToken.mul(slippage).div(1000));
+
       const treasuryPoolTokenBalanceBeforeUpkeep = await curveHelper.poolTokenBalance(
         redactedTreasury.address
       );
@@ -142,6 +173,7 @@ describe('ThecosomataETH', function () {
       );
 
       expect(treasuryPoolTokenBalanceAfterUpkeep).to.be.gt(treasuryPoolTokenBalanceBeforeUpkeep);
+      expect(treasuryPoolTokenBalanceAfterUpkeep).to.be.gte(minLpToken);
     });
 
     it('Should add liquidity up to the ETH cap in treasury and burn the excess BTRFLY', async () => {
