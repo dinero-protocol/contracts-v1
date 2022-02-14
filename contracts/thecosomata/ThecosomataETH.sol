@@ -39,6 +39,8 @@ contract ThecosomataETH is Ownable {
     uint256 private immutable _btrflyDecimals;
     uint256 private immutable _ethDecimals;
 
+    uint256 public slippage = 5; // in 1000th
+
     event AddLiquidity(
         uint256 ethLiquidity,
         uint256 btrflyLiquidity,
@@ -70,6 +72,14 @@ contract ThecosomataETH is Ownable {
         _ethDecimals = IBTRFLY(_WETH).decimals();
     }
 
+    // Update slippage percentage (in 1000th)
+    function setSlippage(uint256 _slippage) external onlyOwner {
+        // Make sure the slippage is less than 10%
+        require(_slippage < 100, "Slippage too high");
+        slippage = _slippage;
+    }
+
+    // Return whether we should perform an upkeep based on the contract's BTRFLY balance
     function checkUpkeep()
         public
         view
@@ -80,6 +90,7 @@ contract ThecosomataETH is Ownable {
         }
     }
 
+    // Fetch the equivalent value of either specified BTRFLY/ETH amount
     function calculateAmountRequiredForLP(uint256 amount, bool isBTRFLY)
         internal
         view
@@ -98,15 +109,18 @@ contract ThecosomataETH is Ownable {
                 (10**_btrflyDecimals)) / (10**_ethDecimals);
     }
 
+    // Calculate the min. LP token amount (after slippage) and attempt to add liquidity
     function addLiquidity(uint256 ethAmount, uint256 btrflyAmount) internal {
         uint256[2] memory amounts = [ethAmount, btrflyAmount];
         uint256 expectedAmount = ICurveCryptoPool(CURVEPOOL).calc_token_amount(
             amounts
         );
+        uint256 minAmount = expectedAmount - ((expectedAmount * slippage) / 1000);
 
-        ICurveCryptoPool(CURVEPOOL).add_liquidity(amounts, expectedAmount);
+        ICurveCryptoPool(CURVEPOOL).add_liquidity(amounts, minAmount);
     }
 
+    // Perform the actual upkeep flow
     function performUpkeep() external onlyOwner {
         require(checkUpkeep(), "Invalid upkeep state");
 
@@ -140,6 +154,7 @@ contract ThecosomataETH is Ownable {
         emit AddLiquidity(ethLiquidity, btrflyLiquidity, unusedBTRFLY);
     }
 
+    // Withdraw arbitrary token and amount owned by the contract
     function withdraw(
         address token,
         uint256 amount,
