@@ -112,68 +112,46 @@ describe('ThecosomataETH', function () {
     await initPoolTx.wait();
   });
 
-  describe('setSlippage', () => {
-    it('Should allow owner to update slippage', async () => {
-      const newSlippage = 10; // 1% slippage
-      await thecosomata.setSlippage(newSlippage);
+  describe('getMinimumLPAmount', () => {
+    it('Should return correct minimum LP amount', async () => {
+      const minLpAmount = await thecosomata.getMinimumLPAmount();
 
-      const slippage = await thecosomata.slippage();
-
-      expect(slippage).to.equal(newSlippage);
+      expect(minLpAmount).to.eq(0);
     });
 
-    it('Should not allow owner to update slippage to be >= 10%', async () => {
-      const newSlippage = 100; // 10% slippage
-
-      await expect(
-        thecosomata.setSlippage(newSlippage)
-      ).to.be.revertedWith('Slippage too high');
-    });
-
-    it('Should not allow non-owner to update slippage', async () => {
-      await expect(
-        thecosomata.connect(simp).setSlippage(1)
-      ).to.be.revertedWith('Ownable: caller is not the owner');
-    });
-  });
-
-  describe('checkUpkeep', () => {
-    it('Should not request upkeep if BTRFLY balance is 0', async () => {
-      const btrflyBalance = await btrfly.balanceOf(thecosomata.address);
-      const upkeepNeeded = await thecosomata.checkUpkeep();
-
-      expect(btrflyBalance).to.equal(0);
-      expect(upkeepNeeded).to.equal(false);
-    });
-
-    it('Should request upkeep if BTRFLY balance is above 0', async () => {
+    it('Should return updated minimum LP amount on sufficient liquidity', async () => {
       const mintBtrflyTx = await btrfly.mint(thecosomata.address, btrflyForThecosomata);
       await mintBtrflyTx.wait();
 
-      const upkeepNeeded = await thecosomata.checkUpkeep();
+      const minLpAmount = await thecosomata.getMinimumLPAmount();
 
-      expect(upkeepNeeded).to.equal(true);
+      expect(minLpAmount).to.be.gt(0);
     });
   });
 
   describe('performUpkeep', () => {
+    it("Should not perform upkeep when received lpToken is < minimum expected amount", async () => {
+      const minLpAmount = await thecosomata.getMinimumLPAmount();
+      const invalidLpAmount = minLpAmount.mul(2);
+
+      await expect(
+        thecosomata.performUpkeep(invalidLpAmount)
+      ).to.be.revertedWith('Slippage');
+    });
+
     it("Should add liquidity using the treasury's WETH and available BTRFLY", async () => {
-      const btrflyBalance = await btrfly.balanceOf(thecosomata.address);
-      const ethBalance = await curveHelper.wethBalance(thecosomata.address);
-      const slippage = await thecosomata.slippage();
-      const expectedLpToken = await curveHelper.poolMinimumToken(ethBalance, btrflyBalance);
-      const minLpToken = expectedLpToken.sub(expectedLpToken.mul(slippage).div(1000));
+      const minLpAmount = await thecosomata.getMinimumLPAmount();
 
       const treasuryPoolTokenBalanceBeforeUpkeep = await curveHelper.poolTokenBalance(
         redactedTreasury.address
       );
-      await thecosomata.performUpkeep();
+      await thecosomata.performUpkeep(minLpAmount);
       const treasuryPoolTokenBalanceAfterUpkeep = await curveHelper.poolTokenBalance(
         redactedTreasury.address
       );
 
       expect(treasuryPoolTokenBalanceAfterUpkeep).to.be.gt(treasuryPoolTokenBalanceBeforeUpkeep);
-      expect(treasuryPoolTokenBalanceAfterUpkeep).to.be.gte(minLpToken);
+      expect(treasuryPoolTokenBalanceAfterUpkeep).to.be.gte(minLpAmount);
     });
 
     it('Should add liquidity up to the ETH cap in treasury and burn the excess BTRFLY', async () => {
@@ -188,9 +166,10 @@ describe('ThecosomataETH', function () {
       const btrflyAmount = ethAmount.mul(ethers.utils.parseUnits('1', 18)).div(poolPrice)
         .div(ethers.utils.parseUnits('1', 9));
       const unusedBtrfly = btrflyForThecosomata.sub(btrflyAmount);
+      const minLpAmount = await thecosomata.getMinimumLPAmount();
 
       await expect(
-        thecosomata.performUpkeep()
+        thecosomata.performUpkeep(minLpAmount)
       )
         .to.emit(thecosomata, 'AddLiquidity')
         .withArgs(
@@ -214,9 +193,12 @@ describe('ThecosomataETH', function () {
       // Mint a very small amount of BTRFLY, which would result in 0 amount in ETH
       const mintBtrflyTx = await btrfly.mint(thecosomata.address, BigNumber.from(1));
       await mintBtrflyTx.wait();
+      const minLpAmount = await thecosomata.getMinimumLPAmount();
+
+      expect(minLpAmount).to.eq(0);
 
       await expect(
-        thecosomata.performUpkeep()
+        thecosomata.performUpkeep(minLpAmount)
       ).to.be.revertedWith('Insufficient amounts');
     });
   });

@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-pragma solidity 0.8.0;
+pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 interface IBTRFLY is IERC20 {
     function burn(uint256 amount) external;
@@ -31,6 +32,8 @@ interface ICurveCryptoPool {
 }
 
 contract ThecosomataETH is Ownable {
+    using SafeERC20 for IERC20;
+
     address public immutable BTRFLY;
     address public immutable WETH;
     address public immutable CURVEPOOL;
@@ -38,8 +41,6 @@ contract ThecosomataETH is Ownable {
 
     uint256 private immutable _btrflyDecimals;
     uint256 private immutable _ethDecimals;
-
-    uint256 public slippage = 5; // in 1000th
 
     event AddLiquidity(
         uint256 ethLiquidity,
@@ -65,89 +66,107 @@ contract ThecosomataETH is Ownable {
         require(_TREASURY != address(0), "Invalid TREASURY address");
         TREASURY = _TREASURY;
 
-        IERC20(_BTRFLY).approve(_CURVEPOOL, 2**256 - 1);
-        IERC20(_WETH).approve(_CURVEPOOL, 2**256 - 1);
+        // Approve for max capacity
+        IERC20(_BTRFLY).approve(
+            _CURVEPOOL,
+            0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+        );
+        IERC20(_WETH).approve(
+            _CURVEPOOL,
+            0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+        );
 
         _btrflyDecimals = IBTRFLY(_BTRFLY).decimals();
         _ethDecimals = IBTRFLY(_WETH).decimals();
     }
 
-    // Update slippage percentage (in 1000th)
-    function setSlippage(uint256 _slippage) external onlyOwner {
-        // Make sure the slippage is less than 10%
-        require(_slippage < 100, "Slippage too high");
-        slippage = _slippage;
-    }
-
-    // Return whether we should perform an upkeep based on the contract's BTRFLY balance
-    function checkUpkeep()
-        public
-        view
-        returns (bool upkeepNeeded)
-    {
-        if (IBTRFLY(BTRFLY).balanceOf(address(this)) > 0) {
-            return true;
-        }
-    }
-
     // Fetch the equivalent value of either specified BTRFLY/ETH amount
     function calculateAmountRequiredForLP(uint256 amount, bool isBTRFLY)
-        internal
+        private
         view
         returns (uint256)
     {
         // Default price is based off "1 BTRFLY = X ETH", in 10^18 format
         uint256 priceOracle = ICurveCryptoPool(CURVEPOOL).price_oracle();
+        uint256 baseExp = 10**18;
+        uint256 ethExp = 10**_ethDecimals;
+        uint256 btrflyExp = 10**_btrflyDecimals;
 
         if (isBTRFLY) {
-            return (((amount * priceOracle) / (10**18)) * (10**_ethDecimals)) /
-                (10**_btrflyDecimals);
+            return (((amount * priceOracle) / baseExp) * ethExp) / btrflyExp;
         }
 
-        return
-            (((amount * (10**18)) / priceOracle) *
-                (10**_btrflyDecimals)) / (10**_ethDecimals);
+        return (((amount * baseExp) / priceOracle) * btrflyExp) / ethExp;
     }
 
-    // Calculate the min. LP token amount (after slippage) and attempt to add liquidity
-    function addLiquidity(uint256 ethAmount, uint256 btrflyAmount) internal {
-        uint256[2] memory amounts = [ethAmount, btrflyAmount];
-        uint256 expectedAmount = ICurveCryptoPool(CURVEPOOL).calc_token_amount(
-            amounts
-        );
-        uint256 minAmount = expectedAmount - ((expectedAmount * slippage) / 1000);
-
-        ICurveCryptoPool(CURVEPOOL).add_liquidity(amounts, minAmount);
-    }
-
-    // Perform the actual upkeep flow
-    function performUpkeep() external onlyOwner {
-        require(checkUpkeep(), "Invalid upkeep state");
-
+    // Return the currently available ETH and BTRFLY amounts
+    function getAvailableLiquidity()
+        private
+        view
+        returns (
+            uint256 ethLiquidity,
+            uint256 btrflyLiquidity
+        )
+    {
         uint256 btrfly = IBTRFLY(BTRFLY).balanceOf(address(this));
         uint256 ethAmount = calculateAmountRequiredForLP(btrfly, true);
         uint256 ethCap = IERC20(WETH).balanceOf(TREASURY);
-        uint256 ethLiquidity = ethCap > ethAmount ? ethAmount : ethCap;
+        ethLiquidity = ethCap > ethAmount ? ethAmount : ethCap;
 
         // Use BTRFLY balance if remaining capacity is enough, otherwise, calculate BTRFLY amount
-        uint256 btrflyLiquidity = ethCap > ethAmount
+        btrflyLiquidity = ethCap > ethAmount
             ? btrfly
             : calculateAmountRequiredForLP(ethLiquidity, false);
+    }
 
+    // Return the minimum expected LP token amount based on the currently available liquidity
+    // which is used by the off-chain process to decide whether to perform upKeep or not
+    function getMinimumLPAmount()
+        external
+        view
+        returns (uint256)
+    {
+        uint256 ethLiquidity;
+        uint256 btrflyLiquidity;
+        (ethLiquidity, btrflyLiquidity) = getAvailableLiquidity();
+
+        if (ethLiquidity != 0 && btrflyLiquidity != 0) {
+            uint256[2] memory amounts = [ethLiquidity, btrflyLiquidity];
+            return ICurveCryptoPool(CURVEPOOL).calc_token_amount(
+                amounts
+            );
+        }
+
+        // Default to 0 if either ETH or BTRFLY amount is insufficient and upKeep shouldn't be performed
+        return 0;
+    }
+
+    // Perform the actual upkeep flow based on the specified liquidity and expected LP amounts
+    function performUpkeep(uint256 minimumLPAmount) external onlyOwner {
+        uint256 ethLiquidity;
+        uint256 btrflyLiquidity;
+        (ethLiquidity, btrflyLiquidity) = getAvailableLiquidity();
+
+        require(
+            ethLiquidity != 0 && btrflyLiquidity != 0 && minimumLPAmount != 0,
+            "Insufficient amounts"
+        );
+
+        // Obtain WETH from the treasury
         IRedactedTreasury(TREASURY).manage(WETH, ethLiquidity);
 
-        // Only complete upkeep only on sufficient amounts
-        require(ethLiquidity > 0 && btrflyLiquidity > 0, "Insufficient amounts");
-        addLiquidity(ethLiquidity, btrflyLiquidity);
+        // Attempt to add liquidity with the specified amounts and minimum LP token to be received
+        uint256[2] memory amounts = [ethLiquidity, btrflyLiquidity];
+        ICurveCryptoPool(CURVEPOOL).add_liquidity(amounts, minimumLPAmount);
 
         // Transfer out the pool token to treasury
         address token = ICurveCryptoPool(CURVEPOOL).token();
         uint256 tokenBalance = IERC20(token).balanceOf(address(this));
-        IERC20(token).transfer(TREASURY, tokenBalance);
+        IERC20(token).safeTransfer(TREASURY, tokenBalance);
 
+        // Burn any excess/unused BTRFLY
         uint256 unusedBTRFLY = IBTRFLY(BTRFLY).balanceOf(address(this));
-
-        if (unusedBTRFLY > 0) {
+        if (unusedBTRFLY != 0) {
             IBTRFLY(BTRFLY).burn(unusedBTRFLY);
         }
 
@@ -160,7 +179,10 @@ contract ThecosomataETH is Ownable {
         uint256 amount,
         address recipient
     ) external onlyOwner {
+        require(token != address(0), "Invalid token");
         require(recipient != address(0), "Invalid recipient");
-        IERC20(token).transfer(recipient, amount);
+        require(amount != 0, "Invalid amount");
+
+        IERC20(token).safeTransfer(recipient, amount);
     }
 }
