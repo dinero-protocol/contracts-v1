@@ -139,6 +139,12 @@ describe('ThecosomataETH', function () {
       ).to.be.revertedWith('Slippage');
     });
 
+    it("Should not perform upkeep with no minimum lpToken", async () => {
+      await expect(
+        thecosomata.performUpkeep(0)
+      ).to.be.revertedWith('Invalid slippage');
+    });
+
     it("Should add liquidity using the treasury's WETH and available BTRFLY", async () => {
       const minLpAmount = await thecosomata.getMinimumLPAmount();
 

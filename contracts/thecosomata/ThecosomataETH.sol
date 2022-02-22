@@ -148,9 +148,10 @@ contract ThecosomataETH is Ownable {
         (ethLiquidity, btrflyLiquidity) = getAvailableLiquidity();
 
         require(
-            ethLiquidity != 0 && btrflyLiquidity != 0 && minimumLPAmount != 0,
+            ethLiquidity != 0 && btrflyLiquidity != 0,
             "Insufficient amounts"
         );
+        require(minimumLPAmount != 0, "Invalid slippage");
 
         // Obtain WETH from the treasury
         IRedactedTreasury(TREASURY).manage(WETH, ethLiquidity);
