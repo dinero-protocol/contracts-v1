@@ -220,7 +220,15 @@ describe('ThecosomataETH', function () {
       const thecosomataBalanceAfterTransfer = await btrfly.balanceOf(thecosomata.address);
       const adminBalanceBeforeWithdraw = await btrfly.balanceOf(admin.address);
 
-      await thecosomata.withdraw(btrfly.address, thecosomataBalanceAfterTransfer, admin.address);
+      await expect(
+        thecosomata.withdraw(btrfly.address, thecosomataBalanceAfterTransfer, admin.address)
+      )
+        .to.emit(thecosomata, 'Withdraw')
+        .withArgs(
+          btrfly.address,
+          thecosomataBalanceAfterTransfer,
+          admin.address
+        );
 
       const adminBalanceAfterWithdraw = await btrfly.balanceOf(admin.address);
       const thecosomataBalanceAfterWithdraw = await btrfly.balanceOf(thecosomata.address);

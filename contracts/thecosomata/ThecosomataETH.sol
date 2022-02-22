@@ -47,6 +47,11 @@ contract ThecosomataETH is Ownable {
         uint256 btrflyLiquidity,
         uint256 btrflyBurned
     );
+    event Withdraw(
+        address token,
+        uint256 amount,
+        address recipient
+    );
 
     constructor(
         address _BTRFLY,
@@ -185,5 +190,7 @@ contract ThecosomataETH is Ownable {
         require(amount != 0, "Invalid amount");
 
         IERC20(token).safeTransfer(recipient, amount);
+
+        emit Withdraw(token, amount, recipient);
     }
 }
