@@ -72,14 +72,8 @@ contract ThecosomataETH is Ownable {
         TREASURY = _TREASURY;
 
         // Approve for max capacity
-        IERC20(_BTRFLY).approve(
-            _CURVEPOOL,
-            0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-        );
-        IERC20(_WETH).approve(
-            _CURVEPOOL,
-            0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-        );
+        IERC20(_BTRFLY).approve(_CURVEPOOL, type(uint256).max);
+        IERC20(_WETH).approve(_CURVEPOOL, type(uint256).max);
 
         _btrflyDecimals = IBTRFLY(_BTRFLY).decimals();
         _ethDecimals = IBTRFLY(_WETH).decimals();
