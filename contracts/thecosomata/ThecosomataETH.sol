@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 interface IBTRFLY is IERC20 {
@@ -31,8 +31,10 @@ interface ICurveCryptoPool {
     function token() external view returns (address);
 }
 
-contract ThecosomataETH is Ownable {
+contract ThecosomataETH is AccessControl {
     using SafeERC20 for IERC20;
+
+    bytes32 public immutable KEEPER_ROLE = keccak256("KEEPER_ROLE");
 
     address public immutable BTRFLY;
     address public immutable WETH;
@@ -52,6 +54,8 @@ contract ThecosomataETH is Ownable {
         uint256 amount,
         address recipient
     );
+    event GrantKeeperRole(address keeper);
+    event RevokeKeeperRole(address keeper);
 
     constructor(
         address _BTRFLY,
@@ -77,6 +81,30 @@ contract ThecosomataETH is Ownable {
 
         _btrflyDecimals = IBTRFLY(_BTRFLY).decimals();
         _ethDecimals = IBTRFLY(_WETH).decimals();
+
+         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+    }
+
+    // Grant the keeper role for the specified address
+    function grantKeeperRole(address keeper)
+        external
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        require(keeper != address(0), "Invalid address");
+        _grantRole(KEEPER_ROLE, keeper);
+
+        emit GrantKeeperRole(keeper);
+    }
+
+    // Revoke the keeper role from the specified address
+    function revokeKeeperRole(address keeper)
+        external
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        require(hasRole(KEEPER_ROLE, keeper), "Invalid address");
+        _revokeRole(KEEPER_ROLE, keeper);
+
+        emit RevokeKeeperRole(keeper);
     }
 
     // Fetch the equivalent value of either specified BTRFLY/ETH amount
@@ -141,7 +169,7 @@ contract ThecosomataETH is Ownable {
     }
 
     // Perform the actual upkeep flow based on the specified liquidity and expected LP amounts
-    function performUpkeep(uint256 minimumLPAmount) external onlyOwner {
+    function performUpkeep(uint256 minimumLPAmount) external onlyRole(KEEPER_ROLE) {
         uint256 ethLiquidity;
         uint256 btrflyLiquidity;
         (ethLiquidity, btrflyLiquidity) = getAvailableLiquidity();
@@ -178,7 +206,7 @@ contract ThecosomataETH is Ownable {
         address token,
         uint256 amount,
         address recipient
-    ) external onlyOwner {
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         require(token != address(0), "Invalid token");
         require(recipient != address(0), "Invalid recipient");
         require(amount != 0, "Invalid amount");
