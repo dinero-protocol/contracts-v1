@@ -119,7 +119,7 @@ contract ThecosomataETH is AccessControl {
         uint256 ethExp = 10**_ethDecimals;
         uint256 btrflyExp = 10**_btrflyDecimals;
 
-        require(priceOracle > 0, "Invalid price oracle");
+        require(priceOracle != 0, "Invalid price oracle");
 
         if (isBTRFLY) {
             return (((amount * priceOracle) / baseExp) * ethExp) / btrflyExp;
@@ -170,7 +170,7 @@ contract ThecosomataETH is AccessControl {
         return 0;
     }
 
-    // Perform the actual upkeep flow based on the specified liquidity and expected LP amounts
+    // Perform the actual upkeep flow based on the available liquidity and expected LP token amounts
     function performUpkeep(uint256 minimumLPAmount) external onlyRole(KEEPER_ROLE) {
         uint256 ethLiquidity;
         uint256 btrflyLiquidity;
