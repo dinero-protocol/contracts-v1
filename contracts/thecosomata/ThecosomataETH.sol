@@ -34,7 +34,7 @@ interface ICurveCryptoPool {
 contract ThecosomataETH is AccessControl {
     using SafeERC20 for IERC20;
 
-    bytes32 public immutable KEEPER_ROLE = keccak256("KEEPER_ROLE");
+    bytes32 public constant KEEPER_ROLE = keccak256("KEEPER_ROLE");
 
     address public immutable BTRFLY;
     address public immutable WETH;
