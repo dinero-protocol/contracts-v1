@@ -119,6 +119,8 @@ contract ThecosomataETH is AccessControl {
         uint256 ethExp = 10**_ethDecimals;
         uint256 btrflyExp = 10**_btrflyDecimals;
 
+        require(priceOracle > 0, "Invalid price oracle");
+
         if (isBTRFLY) {
             return (((amount * priceOracle) / baseExp) * ethExp) / btrflyExp;
         }
