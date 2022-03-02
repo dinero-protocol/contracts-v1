@@ -25,7 +25,6 @@ interface ICurveCryptoPool {
         view
         returns (uint256);
 
-    // Would be replaced by Chainlink based oracle
     function price_oracle() external view returns (uint256);
 
     function token() external view returns (address);
