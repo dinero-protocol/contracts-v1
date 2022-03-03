@@ -5,7 +5,7 @@ import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-interface IBTRFLY is IERC20 {
+interface IERC20Extended is IERC20 {
     function burn(uint256 amount) external;
 
     function decimals() external view returns (uint8);
@@ -78,8 +78,8 @@ contract ThecosomataETH is AccessControl {
         IERC20(_BTRFLY).approve(_CURVEPOOL, type(uint256).max);
         IERC20(_WETH).approve(_CURVEPOOL, type(uint256).max);
 
-        _btrflyDecimals = IBTRFLY(_BTRFLY).decimals();
-        _ethDecimals = IBTRFLY(_WETH).decimals();
+        _btrflyDecimals = IERC20Extended(_BTRFLY).decimals();
+        _ethDecimals = IERC20Extended(_WETH).decimals();
 
          _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
@@ -136,7 +136,7 @@ contract ThecosomataETH is AccessControl {
             uint256 btrflyLiquidity
         )
     {
-        uint256 btrfly = IBTRFLY(BTRFLY).balanceOf(address(this));
+        uint256 btrfly = IERC20Extended(BTRFLY).balanceOf(address(this));
         uint256 ethAmount = calculateAmountRequiredForLP(btrfly, true);
         uint256 ethCap = IERC20(WETH).balanceOf(TREASURY);
         ethLiquidity = ethCap > ethAmount ? ethAmount : ethCap;
@@ -154,9 +154,7 @@ contract ThecosomataETH is AccessControl {
         view
         returns (uint256)
     {
-        uint256 ethLiquidity;
-        uint256 btrflyLiquidity;
-        (ethLiquidity, btrflyLiquidity) = getAvailableLiquidity();
+        (uint256 ethLiquidity, uint256 btrflyLiquidity) = getAvailableLiquidity();
 
         if (ethLiquidity != 0 && btrflyLiquidity != 0) {
             uint256[2] memory amounts = [ethLiquidity, btrflyLiquidity];
@@ -194,9 +192,9 @@ contract ThecosomataETH is AccessControl {
         IERC20(token).safeTransfer(TREASURY, tokenBalance);
 
         // Burn any excess/unused BTRFLY
-        uint256 unusedBTRFLY = IBTRFLY(BTRFLY).balanceOf(address(this));
+        uint256 unusedBTRFLY = IERC20Extended(BTRFLY).balanceOf(address(this));
         if (unusedBTRFLY != 0) {
-            IBTRFLY(BTRFLY).burn(unusedBTRFLY);
+            IERC20Extended(BTRFLY).burn(unusedBTRFLY);
         }
 
         emit AddLiquidity(ethLiquidity, btrflyLiquidity, unusedBTRFLY);
