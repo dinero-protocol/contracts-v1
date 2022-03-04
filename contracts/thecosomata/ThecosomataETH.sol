@@ -41,10 +41,10 @@ contract ThecosomataETH is AccessControl {
     address public immutable TREASURY;
 
     uint256 private immutable _btrflyDecimals;
-    uint256 private immutable _ethDecimals;
+    uint256 private immutable _wethDecimals;
 
     event AddLiquidity(
-        uint256 ethLiquidity,
+        uint256 wethLiquidity,
         uint256 btrflyLiquidity,
         uint256 btrflyBurned
     );
@@ -79,7 +79,7 @@ contract ThecosomataETH is AccessControl {
         IERC20(_WETH).approve(_CURVEPOOL, type(uint256).max);
 
         _btrflyDecimals = IERC20Extended(_BTRFLY).decimals();
-        _ethDecimals = IERC20Extended(_WETH).decimals();
+        _wethDecimals = IERC20Extended(_WETH).decimals();
 
          _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
@@ -106,84 +106,69 @@ contract ThecosomataETH is AccessControl {
         emit RevokeKeeperRole(keeper);
     }
 
-    // Fetch the equivalent value of either specified BTRFLY/ETH amount
-    function calculateAmountRequiredForLP(uint256 amount, bool isBTRFLY)
+    // Fetch the equivalent value of either specified BTRFLY/WETH amount
+    function _calculateAmountRequiredForLP(uint256 amount, bool isBTRFLY)
         private
         view
         returns (uint256)
     {
-        // Default price is based off "1 BTRFLY = X ETH", in 10^18 format
+        // Default price is based off "1 BTRFLY = X WETH", in 10^18 format
         uint256 priceOracle = ICurveCryptoPool(CURVEPOOL).price_oracle();
         uint256 baseExp = 10**18;
-        uint256 ethExp = 10**_ethDecimals;
+        uint256 wethExp = 10**_wethDecimals;
         uint256 btrflyExp = 10**_btrflyDecimals;
 
         require(priceOracle != 0, "Invalid price oracle");
 
         if (isBTRFLY) {
-            return (((amount * priceOracle) / baseExp) * ethExp) / btrflyExp;
+            return (((amount * priceOracle) / baseExp) * wethExp) / btrflyExp;
         }
 
-        return (((amount * baseExp) / priceOracle) * btrflyExp) / ethExp;
+        return (((amount * baseExp) / priceOracle) * btrflyExp) / wethExp;
     }
 
-    // Return the currently available ETH and BTRFLY amounts
-    function getAvailableLiquidity()
+    // Return the currently available WETH and BTRFLY amounts
+    function _getAvailableLiquidity()
         private
         view
         returns (
-            uint256 ethLiquidity,
+            uint256 wethLiquidity,
             uint256 btrflyLiquidity
         )
     {
         uint256 btrfly = IERC20Extended(BTRFLY).balanceOf(address(this));
-        uint256 ethAmount = calculateAmountRequiredForLP(btrfly, true);
-        uint256 ethCap = IERC20(WETH).balanceOf(TREASURY);
-        ethLiquidity = ethCap > ethAmount ? ethAmount : ethCap;
+        uint256 wethAmount = _calculateAmountRequiredForLP(btrfly, true);
+        uint256 wethCap = IERC20(WETH).balanceOf(TREASURY);
+        wethLiquidity = wethCap > wethAmount ? wethAmount : wethCap;
 
         // Use BTRFLY balance if remaining capacity is enough, otherwise, calculate BTRFLY amount
-        btrflyLiquidity = ethCap > ethAmount
+        btrflyLiquidity = wethCap > wethAmount
             ? btrfly
-            : calculateAmountRequiredForLP(ethLiquidity, false);
-    }
-
-    // Return the minimum expected LP token amount based on the currently available liquidity
-    // which is used by the off-chain process to decide whether to perform upKeep or not
-    function getMinimumLPAmount()
-        external
-        view
-        returns (uint256)
-    {
-        (uint256 ethLiquidity, uint256 btrflyLiquidity) = getAvailableLiquidity();
-
-        if (ethLiquidity != 0 && btrflyLiquidity != 0) {
-            uint256[2] memory amounts = [ethLiquidity, btrflyLiquidity];
-            return ICurveCryptoPool(CURVEPOOL).calc_token_amount(
-                amounts
-            );
-        }
-
-        // Default to 0 if either ETH or BTRFLY amount is insufficient and upKeep shouldn't be performed
-        return 0;
+            : _calculateAmountRequiredForLP(wethLiquidity, false);
     }
 
     // Perform the actual upkeep flow based on the available liquidity and expected LP token amounts
-    function performUpkeep(uint256 minimumLPAmount) external onlyRole(KEEPER_ROLE) {
-        uint256 ethLiquidity;
+    function performUpkeep() external onlyRole(KEEPER_ROLE) {
+        uint256 wethLiquidity;
         uint256 btrflyLiquidity;
-        (ethLiquidity, btrflyLiquidity) = getAvailableLiquidity();
+        (wethLiquidity, btrflyLiquidity) = _getAvailableLiquidity();
 
         require(
-            ethLiquidity != 0 && btrflyLiquidity != 0,
+            wethLiquidity != 0 && btrflyLiquidity != 0,
             "Insufficient amounts"
+        );
+
+        // Calculate the minimum amount of lp token expected using the specified amounts
+        uint256[2] memory amounts = [wethLiquidity, btrflyLiquidity];
+        uint256 minimumLPAmount = ICurveCryptoPool(CURVEPOOL).calc_token_amount(
+            amounts
         );
         require(minimumLPAmount != 0, "Invalid slippage");
 
         // Obtain WETH from the treasury
-        IRedactedTreasury(TREASURY).manage(WETH, ethLiquidity);
+        IRedactedTreasury(TREASURY).manage(WETH, wethLiquidity);
 
         // Attempt to add liquidity with the specified amounts and minimum LP token to be received
-        uint256[2] memory amounts = [ethLiquidity, btrflyLiquidity];
         ICurveCryptoPool(CURVEPOOL).add_liquidity(amounts, minimumLPAmount);
 
         // Transfer out the pool token to treasury
@@ -197,7 +182,7 @@ contract ThecosomataETH is AccessControl {
             IERC20Extended(BTRFLY).burn(unusedBTRFLY);
         }
 
-        emit AddLiquidity(ethLiquidity, btrflyLiquidity, unusedBTRFLY);
+        emit AddLiquidity(wethLiquidity, btrflyLiquidity, unusedBTRFLY);
     }
 
     // Withdraw arbitrary token and amount owned by the contract
