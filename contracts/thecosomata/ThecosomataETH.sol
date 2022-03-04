@@ -43,6 +43,8 @@ contract ThecosomataETH is AccessControl {
     uint256 private immutable _btrflyDecimals;
     uint256 private immutable _wethDecimals;
 
+    uint256 public slippage = 5; // in 1000th
+
     event AddLiquidity(
         uint256 wethLiquidity,
         uint256 btrflyLiquidity,
@@ -55,6 +57,7 @@ contract ThecosomataETH is AccessControl {
     );
     event GrantKeeperRole(address keeper);
     event RevokeKeeperRole(address keeper);
+    event SetSlippage(uint256 slippage);
 
     constructor(
         address _BTRFLY,
@@ -82,6 +85,18 @@ contract ThecosomataETH is AccessControl {
         _wethDecimals = IERC20Extended(_WETH).decimals();
 
          _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+    }
+
+    // Update slippage percentage (in 1000th)
+    function setSlippage(uint256 _slippage)
+        external
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        // Make sure the slippage is not > 5%
+        require(_slippage <= 50, "Slippage too high");
+        slippage = _slippage;
+
+        emit SetSlippage(_slippage);
     }
 
     // Grant the keeper role for the specified address
@@ -163,6 +178,7 @@ contract ThecosomataETH is AccessControl {
         uint256 minimumLPAmount = ICurveCryptoPool(CURVEPOOL).calc_token_amount(
             amounts
         );
+        minimumLPAmount -= ((minimumLPAmount * slippage) / 1000);
         require(minimumLPAmount != 0, "Invalid slippage");
 
         // Obtain WETH from the treasury

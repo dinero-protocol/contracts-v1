@@ -154,6 +154,33 @@ describe('ThecosomataETH', function () {
     keeperRole = await thecosomata.KEEPER_ROLE();
   });
 
+  describe('setSlippage', () => {
+    it('Should allow owner to update slippage', async () => {
+      const newSlippage = 10; // 1% slippage
+      await thecosomata.setSlippage(newSlippage);
+
+      const slippage = await thecosomata.slippage();
+
+      expect(slippage).to.equal(newSlippage);
+    });
+
+    it('Should not allow owner to update slippage to be > 5%', async () => {
+      const newSlippage = 51; // 5.1% slippage
+
+      await expect(
+        thecosomata.setSlippage(newSlippage)
+      ).to.be.revertedWith('Slippage too high');
+    });
+
+    it('Should not allow non-owner to update slippage', async () => {
+      await expect(
+        thecosomata.connect(simp).setSlippage(1)
+      ).to.be.revertedWith(
+        `AccessControl: account ${simp.address.toLowerCase()} is missing role ${adminRole}`
+      );
+    });
+  });
+
   describe('grantKeeperRole', () => {
     it('Should grant the keeper role for a valid address', async () => {
       const keeperRoleBefore = await thecosomata.hasRole(
