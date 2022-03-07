@@ -1,4 +1,12 @@
-// import solmate erc1155
+// SPDX-License-Identifier: AGPL-3.0-or-later
+pragma solidity 0.8.0;
+
+// import solmate erc721
+import "@rari-capital/solmate/src/ERC721.sol";
+
+import "./interfaces/ILockToken.sol";
+import "./interfaces/ILockVault.sol";
+
 // storage of collateral in vault
 // delegate voting power
 // lock types
