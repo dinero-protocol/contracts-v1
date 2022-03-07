@@ -2,12 +2,23 @@
 pragma solidity 0.8.0;
 
 // import solmate erc721
-import "@rari-capital/solmate/src/ERC721.sol";
+import "@rari-capital/solmate/src/tokens/ERC721.sol";
 
 import "./interfaces/ILockToken.sol";
 import "./interfaces/ILockVault.sol";
 
-// storage of collateral in vault
+contract LockToken is ILockToken{
+
+    // storage of collateral in vault
+    ILockVault public vault;
+
+    uint public lockTypeCount;
+
+    //mapping(uint => LockInfo )
+
+}
+
+
 // delegate voting power
 // lock types
 // nft specific info

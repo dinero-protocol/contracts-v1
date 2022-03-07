@@ -63,13 +63,13 @@ interface ILockToken{
 
     function userLockedBalanceByLockId(address user, uint lockId) external returns (uint userLockedByLockId);
 
-    function totalUserConviction(adddress user) external view returns (uint userConviction);
+    function totalUserConviction(address user) external view returns (uint userConviction);
 
     function totalLockedBalance() external view returns (uint totalLocked);
 
     function totalProtocolConviction() external view returns (uint totalConviction);
 
-    function getNFTInfo(uint id) external view returns (NFTInfo nftInfo);
+    function getNFTInfo(uint id) external view returns (NFTInfo memory nftInfo);
 
     //admin functions
 
@@ -77,7 +77,7 @@ interface ILockToken{
 
     function setLockStatus(uint lockId, bool enable) external;
 
-    function createNewLock(LockInfo newLock) external;
+    function createNewLock(LockInfo memory newLock) external;
 
     //special functions
 
@@ -89,14 +89,14 @@ interface ILockToken{
 
     function switchLockType(uint id) external;
 
-    function merge(uint[] ids) external;
+    function merge(uint[] calldata ids) external;
 
-    function split(uint[] basisPoints, uint id) external;
+    function split(uint[] calldata basisPoints, uint id) external;
 
-    function batchTransferFrom(uint[] ids) external;
+    function batchTransferFrom(uint[] calldata ids) external;
 
-    function safeBatchTransferFrom(uint[] ids) external;
+    function safeBatchTransferFrom(uint[] calldata ids) external;
 
-    function safeBatchTransferFrom(uint[] ids, bytes[] memory data) external;
+    function safeBatchTransferFrom(uint[] calldata ids, bytes[] memory data) external;
 
 }
