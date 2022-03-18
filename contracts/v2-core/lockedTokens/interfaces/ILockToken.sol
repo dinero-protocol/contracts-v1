@@ -1,36 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity 0.8.0;
 
-// vote delegation
-// - delegate NFT power to a single address
-// - view NFT delegate
-
-// transfer hooks
-// - calculate holder net balance
-// - update snapshot
-
-// mint locks
-
-// get NFT info
-
-// redeem locks
-// - id
-
-// extend lock (keep lock)
-// - id
-
-// extend lock (overload to change lock type)
-// - id
-// - newLockType
-
-// merge locks
-
-// split locks
-
-// userTotalConviction
-
-// userTotalBalance
-
 interface ILockToken{
 
     //vote delegation event
@@ -44,10 +14,15 @@ interface ILockToken{
 
     // ---
 
+    struct Snapshots {
+        uint[] ids;
+        uint[] values;
+    }
+
     struct NFTInfo{
         uint lockId;
         uint expiry;
-        uint netLockTime;
+        uint balTime;
         uint lockAmount;
     }
 
@@ -59,19 +34,38 @@ interface ILockToken{
 
     //view functions
 
-    function totalUserLockedBalance(address user) external view returns (uint totalUserLocked);
+    function getTotalLocked() external view returns (uint totalLocked);
+    function getTotalLockedAt(uint snapshotId) external view returns (uint totalLocked);
 
-    function userLockedBalanceByLockId(address user, uint lockId) external returns (uint userLockedByLockId);
+    function getTotalBalTime() external view returns (uint totalBalTime);
+    function getTotalBalTimeAt(uint snapshotId) external view returns (uint totalBalTime);
 
-    function totalUserConviction(address user) external view returns (uint userConviction);
+    function getTotalConviction() external view returns (uint totalConviction);
+    function getTotalConvictionAt(uint snapshotId) external view returns (uint totalConviction);
 
-    function totalLockedBalance() external view returns (uint totalLocked);
+    function getTotalUserLocked(address user) external view returns (uint totalUserLocked);
+    function getTotalUserLockedAt(address user, uint snapshotId) external view returns (uint totalUserLocked);
 
-    function totalProtocolConviction() external view returns (uint totalConviction);
+    function getUserLockedByLockId(address user, uint lockId) external view returns (uint userLockedByLockId);
+    function getUserLockedByLockIdAt(address user, uint lockId, uint snapshotId) external view returns (uint userLockedByLockId);
+
+    function getTotalUserBalTime(address user) external view returns (uint totalUserBalTime);
+    function getTotalUserBalTimeAt(address user, uint snapshotId) external view returns (uint totalUserBalTime);
+
+    function getTotalUserConviction(address user) external view returns (uint totalUserConviction);
+    function getTotalUserConvictionAt(address user, uint snapshotId) external view returns (uint totalUserConviction);
+
+    //function getUserDelegate(address user) external view returns (address delegate);
 
     function getNFTInfo(uint id) external view returns (NFTInfo memory nftInfo);
 
+    function getNFTConviction(uint id) external view returns (uint nftConviction);
+
+    function getLockInfo(uint id) external view returns (LockInfo memory lockInfo);
+
     //admin functions
+
+    function setKeeperRewardBP(uint keeperRewardBP_) external;
 
     function setTokenURIRoot(string memory root) external;
 
@@ -79,24 +73,30 @@ interface ILockToken{
 
     function createNewLock(LockInfo memory newLock) external;
 
+    function migrateVault(address vault_) external;
+
     //special functions
 
-    function mintLock(uint lockId, uint amount, address recipient) external;
+    function mintLock(uint lockId, uint amount) external returns(uint nftId);
+    function mintLock(uint lockId, uint amount, address to) external returns(uint nftId);
 
-    function extendLock(uint id) external;
+    function expandLock(uint nftId, uint amount) external;
 
-    function redeemLock(uint id) external;
+    function extendLock(uint nftId) external;
 
-    function switchLockType(uint id) external;
+    function breakLock(uint nftId, address keeper) external;
 
-    function merge(uint[] calldata ids) external;
+    function mergeLock(uint[] calldata nftIds) external returns (uint nftId);
+    //function mergeLock(uint[] calldata nftIds, address to) external returns (uint nftId);
 
-    function split(uint[] calldata basisPoints, uint id) external;
+    function splitLock(uint[] calldata basisPoints, uint nftId) external returns (uint[] memory nftIds);
 
-    function batchTransferFrom(uint[] calldata ids) external;
+    //function delegateVotes(address delegate) external;
 
-    function safeBatchTransferFrom(uint[] calldata ids) external;
+    //function batchTransferFrom(uint[] calldata ids) external;
 
-    function safeBatchTransferFrom(uint[] calldata ids, bytes[] memory data) external;
+    //function safeBatchTransferFrom(uint[] calldata ids) external;
+
+    //function safeBatchTransferFrom(uint[] calldata ids, bytes[] memory data) external;
 
 }
