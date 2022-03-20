@@ -3,7 +3,7 @@ pragma solidity 0.8.0;
 
 interface ILockToken{
 
-    //event DelegateVotes(address indexed from, address indexed to);
+    event DelegateVote(address indexed user, address indexed delegate);
 
     event MintLock(address indexed payer, address indexed to, uint indexed lockId, uint amount);
 
@@ -15,6 +15,8 @@ interface ILockToken{
     event MergeLock(address indexed to, uint indexed newNftId, uint[] nftIds);
 
     event SplitLock(address indexed to, uint indexed oldNftId, uint[] nftIds);
+
+    event ToggleAutoRenew(uint indexed nftId, bool indexed autoRenew);
 
     //balance change event
     event BalTimeTransfer(address indexed from, address indexed to, uint amount);
@@ -32,6 +34,7 @@ interface ILockToken{
         uint expiry;
         uint balTime;
         uint lockAmount;
+        bool autoRenew;
     }
 
     struct LockInfo{
@@ -63,7 +66,7 @@ interface ILockToken{
     function getTotalUserConviction(address user) external view returns (uint totalUserConviction);
     function getTotalUserConvictionAt(address user, uint snapshotId) external view returns (uint totalUserConviction);
 
-    //function getUserDelegate(address user) external view returns (address delegate);
+    function getUserDelegate(address user) external view returns (address delegate);
 
     function getNFTInfo(uint id) external view returns (NFTInfo memory nftInfo);
 
@@ -94,12 +97,14 @@ interface ILockToken{
 
     function breakLock(uint nftId, address keeper) external;
 
-    function mergeLock(uint[] calldata nftIds) external returns (uint nftId);
+    function mergeLock(uint[] calldata nftIds, bool autoRenew) external returns (uint nftId);
     //function mergeLock(uint[] calldata nftIds, address to) external returns (uint nftId);
 
     function splitLock(uint[] calldata basisPoints, uint nftId) external returns (uint[] memory nftIds);
 
-    //function delegateVotes(address delegate) external;
+    function toggleAutoRenew(uint nftId) external;
+
+    function delegateVote(address delegate) external;
 
     //function batchTransferFrom(uint[] calldata ids) external;
 
