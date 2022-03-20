@@ -137,7 +137,7 @@ contract LockToken is ILockToken, ERC721, Auth{
         totalUserConviction = (totalUserLocked * snapshotId) - totalUserBalTime;
     }
 
-    function getUserDelegate(address user) external override returns(address delegate){
+    function getUserDelegate(address user) external view override returns(address delegate){
         delegate = _userDelegate[user];
     }
 
@@ -223,12 +223,12 @@ contract LockToken is ILockToken, ERC721, Auth{
         emit LockAmountTransfer(address(0),to,amount);
     }
 
-    function mintLock(uint lockId, uint amount) external override returns(uint nftId){
-        nftId = _mintLock(lockId, amount, msg.sender);
+    function mintLock(uint lockId, uint amount, bool autoRenew) external override returns(uint nftId){
+        nftId = _mintLock(lockId, amount, msg.sender, autoRenew);
     }
 
-    function mintLock(uint lockId, uint amount, address to) external override returns(uint nftId){
-        nftId = _mintLock(lockId, amount, to);
+    function mintLock(uint lockId, uint amount, address to, bool autoRenew) external override returns(uint nftId){
+        nftId = _mintLock(lockId, amount, to, autoRenew);
     }
 
     function _expandLock(uint nftId, uint amount) internal {
@@ -315,7 +315,7 @@ contract LockToken is ILockToken, ERC721, Auth{
 
             if(nftInfo.autoRenew && nftExpiry < block.timestamp ){
 
-                uint nftExpiry = 
+                nftExpiry = 
                     ((((block.timestamp - nftExpiry) / _lockInfos[lockId].lockDuration) + 1)
                     * _lockInfos[lockId].lockDuration) + nftExpiry;
 
@@ -351,7 +351,7 @@ contract LockToken is ILockToken, ERC721, Auth{
     }
 
     function mergeLock(uint[] calldata nftIds, bool autoRenew) external override returns(uint nftId){
-        nftId = _mergeLock(nftIds);
+        nftId = _mergeLock(nftIds, autoRenew);
     }
 
     // split
@@ -408,6 +408,8 @@ contract LockToken is ILockToken, ERC721, Auth{
 
     function _toggleAutoRenew(uint nftId) internal{
 
+        address to = ownerOf[nftId];
+
         require(
             msg.sender == to || msg.sender == getApproved[nftId] || isApprovedForAll[to][msg.sender],
             "LockedBTRFLY : NOT_AUTHORIZED"
@@ -434,7 +436,7 @@ contract LockToken is ILockToken, ERC721, Auth{
         uint balTime = nftInfo.balTime;
 
         // verify that lock is expired
-        if (!autoRenew) require(nftInfo.expiry < block.timestamp, "LockedBTRFLY : NFT has not expired");
+        if (!nftInfo.autoRenew) require(nftInfo.expiry < block.timestamp, "LockedBTRFLY : NFT has not expired");
 
         _burn(nftId);
         delete _nftInfos[nftId];

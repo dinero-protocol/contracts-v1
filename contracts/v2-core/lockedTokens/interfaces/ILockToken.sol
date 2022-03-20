@@ -74,6 +74,8 @@ interface ILockToken{
 
     function getLockInfo(uint id) external view returns (LockInfo memory lockInfo);
 
+    function getSnapshotId() external view returns (uint currentSnapshotId);
+
     //admin functions
 
     function setKeeperRewardBP(uint keeperRewardBP_) external;
@@ -88,8 +90,8 @@ interface ILockToken{
 
     //special functions
 
-    function mintLock(uint lockId, uint amount) external returns(uint nftId);
-    function mintLock(uint lockId, uint amount, address to) external returns(uint nftId);
+    function mintLock(uint lockId, uint amount, bool autoRenew) external returns(uint nftId);
+    function mintLock(uint lockId, uint amount, address to, bool autoRenew) external returns(uint nftId);
 
     function expandLock(uint nftId, uint amount) external;
 
