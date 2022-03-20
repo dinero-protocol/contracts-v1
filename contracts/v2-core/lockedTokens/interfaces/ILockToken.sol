@@ -3,6 +3,8 @@ pragma solidity 0.8.0;
 
 interface ILockToken{
 
+    event ToggleLockStatus(uint indexed lockId, bool enabled);
+
     event DelegateVote(address indexed user, address indexed delegate);
 
     event MintLock(address indexed payer, address indexed to, uint indexed lockId, uint amount);
@@ -17,6 +19,8 @@ interface ILockToken{
     event SplitLock(address indexed to, uint indexed oldNftId, uint[] nftIds);
 
     event ToggleAutoRenew(uint indexed nftId, bool indexed autoRenew);
+
+    event SwitchLockType(uint indexed nftId, uint indexed lockId);
 
     //balance change event
     event BalTimeTransfer(address indexed from, address indexed to, uint amount);
@@ -82,7 +86,7 @@ interface ILockToken{
 
     function setTokenURIRoot(string memory root) external;
 
-    function setLockStatus(uint lockId, bool enable) external;
+    function toggleLockStatus(uint lockId) external;
 
     function createNewLock(LockInfo memory newLock) external;
 
@@ -103,6 +107,8 @@ interface ILockToken{
     //function mergeLock(uint[] calldata nftIds, address to) external returns (uint nftId);
 
     function splitLock(uint[] calldata basisPoints, uint nftId) external returns (uint[] memory nftIds);
+
+    function switchLockType(uint nftId, uint lockId) external;
 
     function toggleAutoRenew(uint nftId) external;
 

@@ -34,6 +34,7 @@ contract LockToken is ILockToken, ERC721, Auth{
 
     mapping(uint => NFTInfo)  internal _nftInfos;
     mapping(uint => LockInfo) internal _lockInfos;
+    mapping(uint => uint) public lockUpdatedAt;
 
     mapping(address => uint) internal _totalUserLocked;
     mapping(address => Snapshots) internal _totalUserLockedSnapshots;
@@ -168,13 +169,17 @@ contract LockToken is ILockToken, ERC721, Auth{
         rootURL = rootURL_;
     }
 
-    function setLockStatus(uint lockId, bool enable) external override requiresAuth {
+    function toggleLockStatus(uint lockId) external override requiresAuth {
         LockInfo storage lockToUpdate = _lockInfos[lockId];
-        lockToUpdate.enabled = enable;
+        lockToUpdate.enabled = !lockToUpdate.enabled;
+        emit ToggleLockStatus(lockId,lockToUpdate.enabled);
     }
 
     function createNewLock(LockInfo memory newLock) external override requiresAuth {
-        _lockInfos[lockTypeCount++] = newLock;
+        uint lockId = lockTypeCount;
+        _lockInfos[lockId] = newLock;
+        lockUpdatedAt[lockId] = block.timestamp;
+        lockTypeCount++;
     }
 
     function migrateVault(address vault_) external override requiresAuth{
@@ -246,6 +251,12 @@ contract LockToken is ILockToken, ERC721, Auth{
         require(_lockInfos[nftInfo.lockId].enabled,"LockedBTRFLY : NFT's lock type is not enabled");
 
         if (!nftInfo.autoRenew) require(nftInfo.expiry > block.timestamp, "LockedBTRFLY : NFT has expired");
+            else if (nftInfo.autoRenew && !_lockInfos[nftInfo.lockId].enabled){
+                require(
+                    lockUpdatedAt[nftInfo.lockId] + _lockInfos[nftInfo.lockId].lockDuration > block.timestamp,
+                    "LockedBTRFLY : NFT has expired"
+                );
+            }
 
         // call Vault to move funds
         btrfly.transferFrom(msg.sender,address(this),amount);
@@ -311,6 +322,14 @@ contract LockToken is ILockToken, ERC721, Auth{
 
             require(lockId == nftInfo.lockId, "LockedBTRFLY : Merge failed due to NFTs having lockTypes");
 
+            if (!nftInfo.autoRenew) require(nftInfo.expiry > block.timestamp, "LockedBTRFLY : NFT has expired");
+            else if (nftInfo.autoRenew && !_lockInfos[nftInfo.lockId].enabled){
+                require(
+                    lockUpdatedAt[nftInfo.lockId] + _lockInfos[nftInfo.lockId].lockDuration > block.timestamp,
+                    "LockedBTRFLY : NFT has expired"
+                );
+            }
+
             uint nftExpiry = nftInfo.expiry;
 
             if(nftInfo.autoRenew && nftExpiry < block.timestamp ){
@@ -320,8 +339,6 @@ contract LockToken is ILockToken, ERC721, Auth{
                     * _lockInfos[lockId].lockDuration) + nftExpiry;
 
             }
-
-            require(nftExpiry > block.timestamp, "LockedBTRFLY : Merge failed due to expired lock");
 
             balTime += nftInfo.balTime;
             lockAmount += nftInfo.lockAmount;
@@ -373,7 +390,13 @@ contract LockToken is ILockToken, ERC721, Auth{
         bool autoRenew = nftInfo.autoRenew;
 
         // verify that lock is not expired
-        if (!autoRenew) require(nftInfo.expiry > block.timestamp, "LockedBTRFLY : NFT has expired");
+        if (!nftInfo.autoRenew) require(nftInfo.expiry > block.timestamp, "LockedBTRFLY : NFT has expired");
+        else if (nftInfo.autoRenew && !_lockInfos[nftInfo.lockId].enabled){
+            require(
+                lockUpdatedAt[nftInfo.lockId] + _lockInfos[nftInfo.lockId].lockDuration > block.timestamp,
+                "LockedBTRFLY : NFT has expired"
+            );
+        }
 
         _burn(nftId);
         delete _nftInfos[nftId];
@@ -408,14 +431,23 @@ contract LockToken is ILockToken, ERC721, Auth{
 
     function _toggleAutoRenew(uint nftId) internal{
 
+        NFTInfo storage nftInfo = _nftInfos[nftId];
+
+        // verify that lock is expired
+        if (!nftInfo.autoRenew) require(nftInfo.expiry > block.timestamp, "LockedBTRFLY : NFT has expired");
+        else if (nftInfo.autoRenew && !_lockInfos[nftInfo.lockId].enabled){
+            require(
+                lockUpdatedAt[nftInfo.lockId] + _lockInfos[nftInfo.lockId].lockDuration > block.timestamp,
+                "LockedBTRFLY : NFT has expired"
+            );
+        }
+
         address to = ownerOf[nftId];
 
         require(
             msg.sender == to || msg.sender == getApproved[nftId] || isApprovedForAll[to][msg.sender],
             "LockedBTRFLY : NOT_AUTHORIZED"
         );
-
-        NFTInfo storage nftInfo = _nftInfos[nftId];
 
         nftInfo.autoRenew = !nftInfo.autoRenew;
 
@@ -437,6 +469,13 @@ contract LockToken is ILockToken, ERC721, Auth{
 
         // verify that lock is expired
         if (!nftInfo.autoRenew) require(nftInfo.expiry < block.timestamp, "LockedBTRFLY : NFT has not expired");
+        else if (nftInfo.autoRenew && !_lockInfos[nftInfo.lockId].enabled){
+            require(
+                lockUpdatedAt[nftInfo.lockId] + _lockInfos[nftInfo.lockId].lockDuration < block.timestamp,
+                "LockedBTRFLY : NFT has not expired"
+            );
+        }
+        else revert("LockedBTRFLY : NFT has not expired");
 
         _burn(nftId);
         delete _nftInfos[nftId];
@@ -458,6 +497,25 @@ contract LockToken is ILockToken, ERC721, Auth{
 
     function breakLock(uint nftId, address keeper) external override{
         _breakLock(nftId,keeper);
+    }
+
+    function switchLockType(uint nftId, uint lockId) external override{
+
+        require(_lockInfos[lockId].enabled,"LockedBTRFLY : Requested lock is not enabled");
+
+        address to = ownerOf[nftId];
+
+        require(
+            msg.sender == to || msg.sender == getApproved[nftId] || isApprovedForAll[to][msg.sender],
+            "LockedBTRFLY : NOT_AUTHORIZED"
+        );
+
+        NFTInfo storage nftInfo = _nftInfos[nftId];
+        nftInfo.lockId = lockId;
+        nftInfo.expiry = block.timestamp + _lockInfos[lockId].lockDuration;
+
+        emit SwitchLockType(nftId, lockId);
+
     }
 
     // transferFrom
