@@ -211,6 +211,9 @@ contract LockToken is ILockToken, ERC721, Auth{
         _totalBalTime += balTime;
         _totalUserBalTime[to] += balTime;
 
+        emit MintLock(msg.sender,to,lockId,amount);
+        emit BalTimeTransfer(address(0),to,balTime);
+        emit LockAmountTransfer(address(0),to,amount);
     }
 
     function mintLock(uint lockId, uint amount) external override returns(uint nftId){
@@ -258,6 +261,7 @@ contract LockToken is ILockToken, ERC721, Auth{
             _totalUserBalTime[nftOwner] += balTime;
         }
 
+        emit ExpandLock(nftId,amount);
     }
 
     function expandLock(uint nftId, uint amount) external override{
@@ -323,6 +327,8 @@ contract LockToken is ILockToken, ERC721, Auth{
             lockAmount
         );
 
+        emit MergeLock(to,nftId,nftIds);
+
     }
 
     function mergeLock(uint[] calldata nftIds) external override returns(uint nftId){
@@ -370,6 +376,8 @@ contract LockToken is ILockToken, ERC721, Auth{
 
         require(bpSum == 10000, "LockedBTRFLY : sum of basis points must be 10000");
 
+        emit SplitLock(to,nftId,nftIds);
+
     }
 
     function splitLock(uint[] calldata basisPoints ,uint nftId) external override returns(uint[] memory nftIds){
@@ -382,6 +390,7 @@ contract LockToken is ILockToken, ERC721, Auth{
         address nftOwner = ownerOf[nftId];
 
         uint amount = nftInfo.lockAmount;
+        uint balTime = nftInfo.balTime;
 
         // verify that lock is expired
         require(nftInfo.expiry < block.timestamp, "LockedBTRFLY : NFT has not expired");
@@ -396,6 +405,11 @@ contract LockToken is ILockToken, ERC721, Auth{
             btrfly.transfer(nftOwner, amount * (10000 - keeperRewardBP)/10000);
             btrfly.transfer(keeper, amount * keeperRewardBP/ 10000 );
         }
+
+        emit BreakLock(keeper,nftId);
+
+        emit LockAmountTransfer(nftOwner, address(0), amount);
+        emit BalTimeTransfer(nftOwner, address(0), balTime);
 
     }
 
@@ -419,6 +433,8 @@ contract LockToken is ILockToken, ERC721, Auth{
         //add lockedAmount + balTime to do
         _totalUserLocked[to] += nftInfo.lockAmount;
         _totalUserBalTime[to] += nftInfo.balTime;
+        emit BalTimeTransfer(from,to,nftInfo.balTime);
+        emit LockAmountTransfer(from,to,nftInfo.lockAmount);
     }
 
     // safeTransferFrom

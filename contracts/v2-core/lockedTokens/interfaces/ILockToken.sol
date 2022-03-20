@@ -3,14 +3,22 @@ pragma solidity 0.8.0;
 
 interface ILockToken{
 
-    //vote delegation event
-    //lock redemption event
-    //lock extension event
-    //merge lock event
-    //split lock event
-    //mint lock event
-    //switch lock event
+    //event DelegateVotes(address indexed from, address indexed to);
+
+    event MintLock(address indexed payer, address indexed to, uint indexed lockId, uint amount);
+
+    //amount is indexed so we can query specifically for extensions;
+    event ExpandLock(uint indexed nftId, uint indexed amount);
+
+    event BreakLock(address indexed keeper, uint indexed nftId);
+
+    event MergeLock(address indexed to, uint indexed newNftId, uint[] nftIds);
+
+    event SplitLock(address indexed to, uint indexed oldNftId, uint[] nftIds);
+
     //balance change event
+    event BalTimeTransfer(address indexed from, address indexed to, uint amount);
+    event LockAmountTransfer(address indexed from, address indexed to, uint amount);
 
     // ---
 
