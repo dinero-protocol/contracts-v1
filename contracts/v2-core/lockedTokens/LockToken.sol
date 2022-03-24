@@ -477,6 +477,13 @@ contract LockToken is ILockToken, ERC721, Auth{
         }
         else revert("LockedBTRFLY : NFT has not expired");
 
+        // update balances and conviction
+        _totalLocked -= amount;
+        _totalUserLocked[to] -= amount;
+
+        _totalBalTime -= balTime;
+        _totalUserBalTime[to] -= balTime;
+
         _burn(nftId);
         delete _nftInfos[nftId];
 
@@ -589,7 +596,7 @@ contract LockToken is ILockToken, ERC721, Auth{
     }
 
     function _getCurrentSnapshotId() internal view returns (uint currentSnapshotId){
-        currentSnapshotId = (block.timestamp % SNAPSHOT_INTERVAL) * SNAPSHOT_INTERVAL ;
+        currentSnapshotId = (block.timestamp / SNAPSHOT_INTERVAL) * SNAPSHOT_INTERVAL ;
     }
 
     function getSnapshotId() external view override returns (uint currentSnapshotId){
