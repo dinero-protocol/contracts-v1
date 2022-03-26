@@ -50,8 +50,8 @@ contract Mariposa is Auth{
         uint currentEpoch = block.timestamp / epochSeconds;
         require (currentEpoch > lastEpoch, "Distributor : distribution event already occurred this epoch");
         require( currentOutstanding() + currentEmissions() + ERC20(btrfly).totalSupply() < cap, "Distributor : distribution will leading to outstanding");
-        for (uint i = 0; currentEpoch - lastEpoch; i++){
-            for (uint j = 1; collectionCount + 1 ; j++){
+        for (uint i = 0; i < currentEpoch - lastEpoch; i++){
+            for (uint j = 1; j < collectionCount + 1 ; j++){
                 if (getCollection[j].mintRate > 0){
                     getCollectionBalance[j] += getCollection[j].mintRate;
                 }
@@ -85,7 +85,7 @@ contract Mariposa is Auth{
         }
     }
 
-    function addCollection(Collection storage newCollection) external requiresAuth{
+    function addCollection(Collection memory newCollection) external requiresAuth{
         collectionCount++;
         getCollection[collectionCount] = newCollection;
     }
@@ -107,7 +107,7 @@ contract Mariposa is Auth{
         uint callerCollection = getAddressCollection[msg.sender];
         require(callerCollection != 0, "Distributor : msg.sender does not have permission to mint BTRFLY");
         getCollectionBalance[callerCollection] -= amount;
-        btrfly.mint(msg.sender,amount);
+        IBTRFLY(btrfly).mint(msg.sender,amount);
     }
 
 }

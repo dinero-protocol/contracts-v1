@@ -479,10 +479,10 @@ contract LockToken is ILockToken, ERC721, Auth{
 
         // update balances and conviction
         _totalLocked -= amount;
-        _totalUserLocked[to] -= amount;
+        _totalUserLocked[nftOwner] -= amount;
 
         _totalBalTime -= balTime;
-        _totalUserBalTime[to] -= balTime;
+        _totalUserBalTime[nftOwner] -= balTime;
 
         _burn(nftId);
         delete _nftInfos[nftId];
@@ -596,7 +596,7 @@ contract LockToken is ILockToken, ERC721, Auth{
     }
 
     function _getCurrentSnapshotId() internal view returns (uint currentSnapshotId){
-        currentSnapshotId = (block.timestamp / SNAPSHOT_INTERVAL) * SNAPSHOT_INTERVAL ;
+        currentSnapshotId = ((block.timestamp / SNAPSHOT_INTERVAL) + 1) * SNAPSHOT_INTERVAL ;
     }
 
     function getSnapshotId() external view override returns (uint currentSnapshotId){

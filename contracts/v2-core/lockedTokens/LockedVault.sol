@@ -20,7 +20,7 @@ contract LockVault is ILockVault, Auth{
             address btrfly_
         )
         Auth(owner_,Authority(authority_)){
-            btrfly = ERC20(_btrfly);
+            btrfly = ERC20(btrfly_);
         }
 
     function deposit(uint amount) external override requiresAuth{
