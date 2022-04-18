@@ -30,7 +30,7 @@ contract Locker is ILocker, ReentrancyGuard, Ownable {
     }
 
     //token constants
-    IERC20 public constant stakingToken = IERC20(0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B); //cvx
+    IERC20 public constant stakingToken = IERC20(0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B); //BTRFLY
 
     bool public isShutdown = false;
 
@@ -45,13 +45,6 @@ contract Locker is ILocker, ReentrancyGuard, Ownable {
     //supplies and epochs
     uint256 public lockedSupply;
     Epoch[] public epochs;
-
-    //staking
-    uint256 public minimumStake = 10000;
-    uint256 public maximumStake = 10000;
-    address public stakingProxy;
-    address public constant cvxcrvStaking = address(0x3Fe65692bfCD0e6CF84cB1E7d24108E434A7587e);
-    uint256 public constant stakeOffsetOnLock = 500; //allow broader range for staking when depositing
 
     //mappings for balance data
     mapping(address => Balances) public balances;
@@ -70,13 +63,6 @@ contract Locker is ILocker, ReentrancyGuard, Ownable {
         stakingToken.safeTransferFrom(msg.sender, address(this), _amount);
         //lock
         _lock(_account, _amount, _spendRatio, false);
-    }
-
-    //Set the staking contract for the underlying cvx
-    function setStakingContract(address _staking) external onlyOwner {
-        require(stakingProxy == address(0), "!assign");
-
-        stakingProxy = _staking;
     }
 
     function _lock(
