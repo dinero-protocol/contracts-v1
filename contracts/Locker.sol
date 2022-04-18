@@ -50,8 +50,7 @@ contract Locker is ILocker, ReentrancyGuard, Ownable {
     mapping(address => LockedBalance[]) public userLocks;
 
     constructor() {
-        uint256 currentEpoch = (block.timestamp / REWARDS_DURATION) * REWARDS_DURATION;
-        epochs.push(Epoch({supply: 0, date: uint32(currentEpoch)}));
+        epochs.push(Epoch({supply: 0, date: uint32(block.timestamp)}));
     }
 
     function lock(
