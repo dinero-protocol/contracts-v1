@@ -15,7 +15,6 @@ contract Locker is ILocker, ReentrancyGuard, Ownable {
 
     struct Balances {
         uint112 locked;
-        uint112 boosted;
         uint32 nextUnlockIndex;
     }
 
