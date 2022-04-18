@@ -148,7 +148,7 @@ contract Locker is ILocker, ReentrancyGuard, Ownable {
             eIndex--;
         }
 
-        emit Staked(_account, lockEpoch, _amount, lockAmount);
+        emit Locked(_account, lockEpoch, _amount, lockAmount);
     }
 
     //insert a new epoch if needed. fill in any gaps
@@ -172,7 +172,7 @@ contract Locker is ILocker, ReentrancyGuard, Ownable {
 
     /* ========== EVENTS ========== */
     event RewardAdded(address indexed _token, uint256 _reward);
-    event Staked(
+    event Locked(
         address indexed _user,
         uint256 indexed _epoch,
         uint256 _paidAmount,
